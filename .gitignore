@@ -1,0 +1,12 @@
+# Roblox Studio places y bloqueos
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+
+# Wally
+Packages/
+ServerPackages/
+
+# Rojo
+sourcemap.json
