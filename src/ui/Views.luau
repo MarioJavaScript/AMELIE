@@ -1,3 +1,5 @@
 --!strict
--- TODO: crear vistas segun docs/specs/arquitectura.md.
-return {}
+-- Registro de vistas de UI (docs/specs/arquitectura.md). Cada vista es un ModuleScript hermano.
+return {
+	Hud = require(script.Parent:WaitForChild("HudView")),
+}
