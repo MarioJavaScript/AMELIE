@@ -1,0 +1,51 @@
+--!strict
+return {
+	MaxStructures = 120,
+	BuildRangeStuds = 15,
+	GridStuds = 8,
+	MaxSlopeDegrees = 5,
+	VerticalToleranceStuds = 0.25,
+	CollisionInsetStuds = 0.02,
+	PlaceCooldownSeconds = 0.5,
+	DoorTransitionSeconds = 0.4,
+	RepairHoldSeconds = 2,
+	Structures = {
+		Cimiento = {
+			Size = Vector3.new(8, 1, 8),
+			MaxHealth = 300,
+			Cost = { Madera = 6, Piedra = 4 },
+			RepairCost = { Madera = 2, Piedra = 1 },
+			RepairHealth = 75,
+		},
+		Pared = {
+			Size = Vector3.new(8, 8, 1),
+			MaxHealth = 200,
+			Cost = { Madera = 6 },
+			RepairCost = { Madera = 2 },
+			RepairHealth = 50,
+		},
+		MarcoPuerta = {
+			Size = Vector3.new(8, 8, 1),
+			MaxHealth = 200,
+			Cost = { Madera = 8, Chatarra = 2 },
+			RepairCost = { Madera = 2, Chatarra = 1 },
+			RepairHealth = 50,
+		},
+		Fogata = {
+			Size = Vector3.new(4, 2, 4),
+			MaxHealth = 150,
+			Cost = { Madera = 6, Piedra = 6 },
+			RepairCost = { Madera = 2, Piedra = 1 },
+			RepairHealth = 50,
+		},
+	},
+	Fogata = {
+		FuelHoldSeconds = 1,
+		FuelPerWoodSeconds = 30,
+		FuelCapacitySeconds = 180,
+		LowFuelThresholdSeconds = 30,
+		IgniteHoldSeconds = 5,
+		EnemyExtinguishRangeStuds = 4,
+		Healing = { HealthPerSecond = 2, RadiusStuds = 8, DelayAfterDamageSeconds = 5 },
+	},
+}

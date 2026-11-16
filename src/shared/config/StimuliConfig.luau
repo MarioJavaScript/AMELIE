@@ -1,0 +1,24 @@
+--!strict
+return {
+	NoiseRadiusStuds = {
+		CrouchStep = 0,
+		WalkStep = 10,
+		WaterStep = 25,
+		SprintStep = 35,
+		ResourceHit = 50,
+		BuildRepair = 45,
+		MetalOpen = 30,
+		Revive = 30,
+		DownedShout = 60,
+		IgniteCampfire = 45,
+		WoodDoor = 10,
+	},
+	ShoutCooldownSeconds = 5,
+	ImpulseLifetimeSeconds = 2,
+	ContinuousRefreshSeconds = 0.5,
+	MovementStepSeconds = 0.5,
+	InteractionNoiseSeconds = 1,
+	MaxActiveImpulses = 256,
+	Flashlight = { RangeStuds = 60, ConeDegrees = 50 },
+	Campfire = { VisualRangeStuds = 40 },
+}
