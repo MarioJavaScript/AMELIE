@@ -14,7 +14,11 @@ local connections: { RBXScriptConnection } = {}
 local lastSnapshot: { [Player]: number } = {}
 local lastError: { [Player]: number } = {}
 local revisions: { [Player]: number } = {}
-local RUN_ID = "f1"
+local session: any
+
+local function currentRunId(): string
+	return session.GetRunId() or ""
+end
 
 local function result(player: Player, payload: any, ok: boolean, code: string)
 	if not ok then
@@ -25,7 +29,7 @@ local function result(player: Player, payload: any, ok: boolean, code: string)
 		lastError[player] = now
 	end
 	remotes.ActionResult:FireClient(player, {
-		runId = RUN_ID,
+		runId = currentRunId(),
 		requestId = if typeof(payload) == "table" and typeof(payload.requestId) == "string"
 			then payload.requestId
 			else "",
@@ -41,6 +45,7 @@ function Service.Init(context: { [string]: unknown })
 	network = (context.Configs :: any).NetworkConfig
 	playerConfig = (context.Configs :: any).PlayerConfig
 	objectivesConfig = (context.Configs :: any).ObjectivesConfig
+	session = (context.Services :: any).SessionService
 	Guard.Init(network)
 end
 
@@ -63,14 +68,15 @@ function Service.PublishSnapshot(player: Player)
 			})
 		end
 	end
+	local runId = currentRunId()
 	local revision = (revisions[player] or 0) + 1
 	revisions[player] = revision
 	local snapshot = {
 		protocolVersion = 1,
-		runId = RUN_ID,
+		runId = runId,
 		revision = revision,
 		serverTime = Workspace:GetServerTimeNow(),
-		phase = "Day",
+		phase = if runId == "" then "Lobby" else "Day",
 		day = 1,
 		night = 1,
 		phaseEndsAt = 0,
@@ -122,15 +128,20 @@ function Service.BindRemotes()
 		Service.PublishSnapshot(player)
 	end)
 	bind("SetMovementMode", function(player, payload)
-		if payload.runId ~= RUN_ID then
+		if payload.runId ~= currentRunId() or payload.runId == "" then
 			result(player, payload, false, "StaleRun")
 			return
 		end
-		result(player, payload, players.SetMovementMode(player, payload.mode), "Ok")
+		if players.SetMovementMode(player, payload.mode) then
+			result(player, payload, true, "Ok")
+		else
+			local state = players.GetState(player)
+			result(player, payload, false, if state == nil or state.life ~= "Alive" then "NotAlive" else "InvalidState")
+		end
 		Service.PublishSnapshot(player)
 	end)
 	bind("SetFlashlight", function(player, payload)
-		if payload.runId ~= RUN_ID then
+		if payload.runId ~= currentRunId() or payload.runId == "" then
 			result(player, payload, false, "StaleRun")
 			return
 		end

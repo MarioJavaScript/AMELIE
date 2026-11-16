@@ -5,6 +5,7 @@
 return {
 	InputBindings = {
 		Crouch = Enum.KeyCode.C,
+		Sprint = Enum.KeyCode.LeftShift,
 		Flashlight = Enum.KeyCode.F,
 		DebugCyclePhase = Enum.KeyCode.F6,
 		DebugCycleNight = Enum.KeyCode.F7,
@@ -30,6 +31,9 @@ return {
 		CrouchSmoothing = 12,
 		-- Sin reconciliacion con el snapshot antes de este tiempo tras pedir un cambio de modo.
 		ModeReconcileSeconds = 3,
+		-- SetCore puede fallar al inicio: reintentos para desactivar el boton de reiniciar.
+		ResetButtonRetries = 30,
+		ResetButtonRetrySeconds = 1,
 	},
 
 	Flashlight = {

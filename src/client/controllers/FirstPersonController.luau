@@ -1,13 +1,13 @@
 --!strict
 -- Primera persona bloqueada, viewbobbing segun velocidad y agachado visual (docs/specs/jugador.md).
 -- Todo es visual: el servidor decide velocidad real y la capsula fisica no cambia al agacharse.
+-- La intencion de modo (Walk/Sprint/Crouch) y su envio al servidor viven en MovementController.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Types = require(Shared:WaitForChild("types"))
 local Config = Shared:WaitForChild("config")
 local PlayerConfig = require(Config:WaitForChild("PlayerConfig"))
 local PresentationConfig = require(Config:WaitForChild("PresentationConfig"))
@@ -17,36 +17,14 @@ local Controller = {}
 export type Context = { [string]: unknown }
 
 local localPlayer = Players.LocalPlayer
-local remotes: { [string]: RemoteEvent } = {}
 local controllers: { [string]: any } = {}
 
 local connections: { RBXScriptConnection } = {}
-local unsubscribers: { () -> () } = {}
 local humanoid: Humanoid? = nil
-local crouchIntent = false
-local reconcileAfter = 0
 local reducedMotion = false
 local bobPhase = 0
 local bobAmplitude = 0
 local crouchOffset = 0
-
-local function isPlayablePhase(phase: string): boolean
-	return phase == "Day" or phase == "Dusk" or phase == "Night" or phase == "Dawn"
-end
-
--- Sin snapshot (arranque o pruebas sin servidor) se permite el cambio visual; con snapshot exige Alive y fase de juego.
-local function canChangeMode(): boolean
-	local state = controllers.StateController
-	local snapshot = if state ~= nil then state.Get() else nil
-	if snapshot == nil then
-		return true
-	end
-	if not isPlayablePhase(snapshot.phase) then
-		return false
-	end
-	local view = state.GetSelfPlayer()
-	return view == nil or view.life == "Alive"
-end
 
 local function applyHumanoidRules(target: Humanoid)
 	-- Salto deshabilitado en MVP: se usan rampas y escaleras de Studio.
@@ -54,6 +32,11 @@ local function applyHumanoidRules(target: Humanoid)
 	target.JumpPower = 0
 	target.JumpHeight = 0
 	target:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+end
+
+local function isCrouching(): boolean
+	local movement = controllers.MovementController
+	return movement ~= nil and movement.IsCrouching() == true
 end
 
 local function bindCharacter(character: Model)
@@ -65,42 +48,7 @@ local function bindCharacter(character: Model)
 	applyHumanoidRules(found)
 	bobPhase = 0
 	bobAmplitude = 0
-	crouchOffset = if crouchIntent then -PlayerConfig.Camera.CrouchOffsetStuds else 0
-end
-
-local function requestMode(mode: "Walk" | "Crouch")
-	local state = controllers.StateController
-	local request = state.NewRequest()
-	local payload: Types.SetMovementMode = { requestId = request.requestId, runId = request.runId, mode = mode }
-	remotes.SetMovementMode:FireServer(payload)
-end
-
-local function setCrouch(want: boolean)
-	if want == crouchIntent then
-		return
-	end
-	if want and not canChangeMode() then
-		return
-	end
-	crouchIntent = want
-	reconcileAfter = os.clock() + PresentationConfig.FirstPerson.ModeReconcileSeconds
-	requestMode(if want then "Crouch" else "Walk")
-end
-
--- El snapshot corrige la intencion local pasado el tiempo de espera: el servidor manda.
-local function onSnapshot(snapshot: Types.Snapshot)
-	local view = controllers.StateController.GetSelfPlayer()
-	if view ~= nil and view.life ~= "Alive" then
-		crouchIntent = false
-		return
-	end
-	if controllers.StateController.IsDebug() or os.clock() < reconcileAfter then
-		return
-	end
-	local serverCrouch = snapshot.self.moveMode == "Crouch"
-	if serverCrouch ~= crouchIntent then
-		crouchIntent = serverCrouch
-	end
+	crouchOffset = if isCrouching() then -PlayerConfig.Camera.CrouchOffsetStuds else 0
 end
 
 local function smoothing(rate: number, dt: number): number
@@ -137,7 +85,7 @@ local function onRender(dt: number)
 	bobAmplitude += (baseAmplitude * factor - bobAmplitude) * smoothing(settings.BobAmplitudeSmoothing, dt)
 	bobPhase = (bobPhase + dt * 2 * math.pi * PlayerConfig.Camera.BobFrequencyHz * factor) % (4 * math.pi)
 
-	local targetCrouch = if crouchIntent then -PlayerConfig.Camera.CrouchOffsetStuds else 0
+	local targetCrouch = if isCrouching() then -PlayerConfig.Camera.CrouchOffsetStuds else 0
 	crouchOffset += (targetCrouch - crouchOffset) * smoothing(settings.CrouchSmoothing, dt)
 
 	-- Balanceo vertical a la frecuencia base y lateral a la mitad; amplitud lateral reducida.
@@ -146,8 +94,20 @@ local function onRender(dt: number)
 	current.CameraOffset = Vector3.new(bobX, bobY + crouchOffset, 0)
 end
 
+-- Desactiva el boton de reiniciar personaje (jugador.md: el servidor controla el ciclo de vida del personaje).
+-- SetCore falla mientras el CoreGui no esta listo, asi que se reintenta.
+local function disableResetButton()
+	local settings = PresentationConfig.FirstPerson
+	for _ = 1, settings.ResetButtonRetries do
+		if pcall(StarterGui.SetCore, StarterGui, "ResetButtonCallback", false) then
+			return
+		end
+		task.wait(settings.ResetButtonRetrySeconds)
+	end
+	warn("FirstPersonController: no se pudo desactivar el boton de reiniciar personaje")
+end
+
 function Controller.Init(context: Context)
-	remotes = context.Remotes :: { [string]: RemoteEvent }
 	controllers = context.Controllers :: { [string]: any }
 end
 
@@ -165,20 +125,7 @@ function Controller.Start()
 	end
 
 	table.insert(connections, RunService.RenderStepped:Connect(onRender))
-
-	table.insert(
-		connections,
-		UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
-			if processed then
-				return
-			end
-			if input.KeyCode == PresentationConfig.InputBindings.Crouch then
-				setCrouch(not crouchIntent)
-			end
-		end)
-	)
-
-	table.insert(unsubscribers, controllers.StateController.Subscribe(onSnapshot))
+	task.spawn(disableResetButton)
 end
 
 function Controller.Stop()
@@ -186,17 +133,9 @@ function Controller.Stop()
 		connection:Disconnect()
 	end
 	table.clear(connections)
-	for _, unsubscribe in unsubscribers do
-		unsubscribe()
-	end
-	table.clear(unsubscribers)
 	if humanoid ~= nil then
 		humanoid.CameraOffset = Vector3.zero
 	end
-end
-
-function Controller.IsCrouching(): boolean
-	return crouchIntent
 end
 
 -- Opcion de accesibilidad: amplitud de balanceo = PresentationConfig.ReducedMotionBobAmplitudeStuds.
