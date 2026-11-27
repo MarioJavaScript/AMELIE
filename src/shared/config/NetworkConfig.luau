@@ -41,5 +41,6 @@ return {
 		BeginInteraction = { Rate = 3, Burst = 3 },
 		CancelInteraction = { Rate = 4, Burst = 4 },
 		Shout = { Rate = 0.2, Burst = 1 },
+		DebugBridge = { Rate = 1, Burst = 2 },
 	},
 }

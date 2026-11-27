@@ -17,6 +17,7 @@ local keys: { [string]: { [string]: string } } = {
 	BeginInteraction = { requestId = "id", runId = "id", action = "action", targetId = "id" },
 	CancelInteraction = { requestId = "id", runId = "id", interactionId = "id" },
 	Shout = { requestId = "id", runId = "id" },
+	DebugBridge = { requestId = "id", runId = "id", enabled = "boolean" },
 }
 local actions = {
 	PickupObjective = true,

@@ -23,7 +23,7 @@ Valores aprobados en `src/shared/config/StimuliConfig.luau`:
 |---|---:|---|
 | `CrouchStep` | 0 | No se registra estímulo audible |
 | `WalkStep` | 10 studs | Movimiento Walk verificado |
-| `WaterStep` | 25 studs | Movimiento en volumen pantano/agua de Studio |
+| `WaterStep` | 25 studs | Movimiento dentro de un volumen `WaterZone` (río) |
 | `SprintStep` | 35 studs | Sprint autorizado y desplazamiento real |
 | `ResourceHit` | 50 studs | Golpe aceptado a nodo |
 | `BuildRepair` | 45 studs | Colocación aceptada o reparación mantenida |
@@ -31,7 +31,7 @@ Valores aprobados en `src/shared/config/StimuliConfig.luau`:
 | `Revive` | 30 studs | Revive mantenido válido |
 | `DownedShout` | 60 studs | Caído y cooldown cumplido |
 | `RadioTransmission` | Global (todo mapa) | Fuente continua Transmitting |
-| `PieceImpact` | 60 studs | Pieza soltada que cae más de `ObjectivesConfig.ImpactMinDropStuds` y toca el suelo (caso típico: Antena desde la torre, ver [objetivos](objetivos.md)). Impulso único en el punto de impacto |
+| `PieceImpact` | 60 studs | Pieza soltada que cae más de `ObjectivesConfig.ImpactMinDropStuds` y toca el suelo (caso típico: Antena desde una azotea del distrito industrial, ver [objetivos](objetivos.md)). Impulso único en el punto de impacto |
 
 **Decisión de spec:** clases adicionales necesarias: `IgniteCampfire`=45 studs, `WoodDoor`=10 studs. Feedback de instalar pieza y crafting son cosméticos y no crean ruido de IA adicional. `StimuliConfig` contiene estos radios, `ShoutCooldownSeconds=5`, `ImpulseLifetimeSeconds=2`, `ContinuousRefreshSeconds=0.5`, `MovementStepSeconds=0.5`, `InteractionNoiseSeconds=1`. Revive/reparación/encendido emiten al inicio y cada segundo válido; cancelar no borra ruido ya emitido. Ruido de construcción solo al confirmar; intentos inválidos no atraen enemigos artificialmente.
 
@@ -57,9 +57,11 @@ Solo protege de la criatura principal; los menores pueden entrar y apagarla desd
 
 `ExtinguishByEnemy` valida identidad/tipo, noche ≥3, contacto y fuente existente; la IA no modifica atributos arbitrariamente. Fogata sin combustible o HP también se apaga. Reencender dura 5 s; radio seguro se activa solo tras commit. No se comunica «IA debe atacar» desde cliente.
 
-## Mina y frontera con F4
+## Nido y frontera con F4
 
-World identifica volumen Nest. Query devuelve luces incidentes y ruidos audibles en él también de día. F4-1/F4-2 debe definir qué cuenta como ruido fuerte para despertar, duración de caza, avisos y retorno, además de respuesta a fuentes de luz. F0-3 no puede convertir simplemente todo ruido en ataque diurno. Hasta tener esas specs, pruebas usan un consumidor ficticio servidor que inspecciona entradas, no una IA improvisada.
+El nido está en los sótanos del complejo científico (territorio avanzado, [mapa](mapa.md) 3.6); la mina ya no es nido. World identifica volumen Nest. Query devuelve luces incidentes y ruidos audibles en él también de día. F4-1/F4-2 debe definir qué cuenta como ruido fuerte para despertar, duración de caza, avisos y retorno, además de respuesta a fuentes de luz. F0-3 no puede convertir simplemente todo ruido en ataque diurno. Hasta tener esas specs, pruebas usan un consumidor ficticio servidor que inspecciona entradas, no una IA improvisada.
+
+Volúmenes `AnomalyZone` (mapa 8.1): reservados para efectos futuros de niebla, interferencia electromagnética (por ejemplo, parpadeo de linterna) y audio. En MVP no generan ni modifican estímulos; StimulusService los ignora.
 
 ## Pruebas futuras en Studio
 

@@ -21,6 +21,8 @@ Los números de este documento son objetivos de diseño. En código van en `src/
 ### Premisa
 Un grupo de 1 a 4 personas queda varado en un bosque aislado tras un accidente. En un claro hay una caseta de guardabosques con una radio de emergencia rota. Algo vive en el bosque y caza de noche. La única salida es reparar la radio, transmitir la señal y aguantar hasta que llegue el rescate.
 
+Un río encajonado parte la zona en dos. Al sur, el territorio donde están varados: un pueblo evacuado a toda prisa y una mina abandonada. Al norte, tras un puente volado, el distrito industrial, un bosque que ya no parece de este mundo y el complejo científico de donde salió la criatura. El sur muestra las consecuencias; el norte esconde el origen (sección 2.0).
+
 ### Estructura de tiempo
 La partida es una secuencia de ciclos **Día → Atardecer → Noche**. Hay **5 noches** (ver sección 3).
 
@@ -37,8 +39,8 @@ La partida es una secuencia de ciclos **Día → Atardecer → Noche**. Hay **5 
 2. **Llegada (Día 1)**: cinemática corta o texto en pantalla (sin voces en MVP). Los jugadores aparecen en el claro junto a la caseta de radio. Cada uno tiene linterna con batería parcial. La radio muestra 4 huecos vacíos: es el objetivo visible desde el primer minuto.
 3. **Día 1, preparación**: talar y picar cerca de la base, craftear hacha y pico, encender la fogata principal, poner las primeras paredes. Es el día más largo para aprender sin presión.
 4. **Primera noche**: la criatura aparece por primera vez. Solo investiga y asusta; no rompe paredes. Sirve para enseñar las reglas de luz y ruido.
-5. **Días 2-4, expediciones**: el grupo decide cuándo y a qué zona ir por cada pieza. Llevar una pieza de vuelta a la base e instalarla en la radio es el avance principal. Mientras tanto hay que mantener la base (paredes, fogata, pilas).
-6. **Noches 2-4, asedio creciente**: la criatura ataca la base, rompe paredes y, desde la noche 3, llega acompañada.
+5. **Días 2-4, expediciones en dos actos**: primero las dos piezas del territorio inicial (gasolinera y mina) y los recursos para reconstruir el puente; con el puente en pie, las dos piezas del territorio avanzado (distrito industrial y complejo científico). Llevar una pieza de vuelta a la base e instalarla en la radio es el avance principal. Mientras tanto hay que mantener la base (paredes, fogata, pilas).
+6. **Noches 2-4, asedio creciente**: la criatura ataca la base y rompe paredes. Desde la noche 3 hay acechadores en el territorio avanzado; llegan a la base en cuanto el puente está construido.
 7. **Radio completa**: con las 4 piezas instaladas, la radio queda lista. La transmisión solo se puede iniciar **de noche** (ver 2.3).
 8. **Noche de transmisión (noche final)**: la radio hace ruido constante y atrae a todo el bosque. El grupo defiende la caseta hasta que termina la transmisión y amanece.
 9. **Rescate**: al amanecer llega el rescate. Pantalla de victoria con estadísticas.
@@ -54,18 +56,35 @@ La tensión de cada día es **avaricia contra seguridad**: cada minuto más fuer
 
 ## 2. Objetivo principal: "Señal de rescate"
 
+### 2.0 El mundo en dos actos
+
+El mapa se divide en dos territorios separados por un río encajonado. Layout completo en [mapa.md](specs/mapa.md).
+
+| Territorio | Zonas | Papel |
+|---|---|---|
+| **Inicial (acto 1)** | Safe Zone (base), ciudad abandonada con gasolinera, mina abandonada. Torre de vigilancia como mirador opcional | Aprender, recolectar, primeras 2 piezas. Muestra las consecuencias: evacuación interrumpida, control militar destruido, campamento minero abandonado |
+| **Avanzado (acto 2)** | Distrito industrial, bosque anómalo, complejo científico (con el nido en sus sótanos) | Últimas 2 piezas, más peligro, escoltas largas. Esconde el origen: pistas de una investigación previa que unen el complejo, el distrito y el bosque, sin revelar el experimento ni qué es la criatura |
+
+Reglas:
+- **El puente es la única conexión transitable para los jugadores.** Está volado. El río no se puede vadear hacia el norte (la orilla norte es una pared de roca) y no se puede rodear (montañas y límites del mapa). La geografía impide saltarse la progresión.
+- **Reconstruir el puente** cuesta los recursos del acto 1 y es una obra ruidosa junto al agua (construccion.md, Fase 3). Sin temporizadores: el coste está pensado para que el puente caiga hacia la mitad de una partida de ~54 min (día 3 en un grupo normal). Un grupo eficiente puede tenerlo antes; uno lento, después.
+- **La criatura principal cruza el río a nado** desde la noche 1: el puente no la frena y la curva de la sección 3 no cambia.
+- **Los acechadores anómalos no nadan.** Viven en el territorio avanzado desde la noche 3 y solo cruzan al territorio inicial por el puente construido. Construir el puente abre el camino a las piezas y también a ellos: es la escalada del acto 2.
+- **La mina ya no es el nido.** Es dificultad media: exploración subterránea a oscuras y recursos minerales. El nido está en las instalaciones profundas del complejo científico.
+- **El bosque anómalo** es consecuencia de los experimentos: vegetación alterada, bioluminiscencia y restos de la investigación. Queda preparado (volúmenes `AnomalyZone`) para mecánicas futuras de niebla, interferencia electromagnética y terror auditivo, que no entran en el MVP. A futuro, la anomalía podrá propagarse visualmente alrededor del puente.
+
 ### 2.1 Las piezas
 
 La radio necesita **4 piezas** (4 en MVP, 5ª pieza post-MVP). Cada pieza está en una zona fija del mapa. Dentro de cada zona, la pieza aparece en **uno de 3 puntos posibles**, elegido al azar al empezar la partida, para que cada run sea un poco distinta.
 
-Las zonas están ordenadas por distancia y peligro, pero **el orden es libre**. El grupo puede arriesgarse a ir primero a la más lejana.
+Dentro de cada acto **el orden es libre**. Las piezas del acto 2 exigen el puente.
 
-| # | Pieza | Zona | Distancia a la base | Por qué es peligrosa |
-|---|-------|------|---------------------|----------------------|
-| 1 | **Batería** | Gasolinera abandonada, junto a la carretera cortada | Cerca (~150 studs) | Es la zona "tutorial". El peligro es bajo pero real: estanterías y coches donde hay que buscar haciendo ruido (abrir puertas metálicas y cajones suena). Buena para aprender el sistema de ruido de día. |
-| 2 | **Antena** | Torre de vigilancia forestal en la colina | Media (~300 studs) | Es **pesada** (ver 2.2): quien la carga no puede correr. La colina es abierta: no hay dónde esconderse y se ve la base desde arriba, pero también la criatura te ve. Subir la escalera de la torre es lento y ruidoso. Si el grupo se tarda, el atardecer los alcanza en terreno abierto. |
-| 3 | **Transceptor** | Campamento hundido en el pantano | Lejos (~450 studs) | Niebla espesa incluso de día, visibilidad muy baja. Caminar por el agua hace ruido aunque no se corra. Las cabañas están semihundidas y hay que entrar en ellas. Desde la noche 3, los acechadores menores salen del pantano. |
-| 4 | **Cristal de frecuencia** | Mina / cueva al pie de la montaña: el nido de la criatura | Muy lejos (~600 studs) | Oscuridad total: la linterna es obligatoria y la luz es justo lo que la despierta. **De día la criatura duerme aquí**: si alguien hace ruido fuerte cerca, despierta y caza aunque sea de día. Es la única pieza que puede costar la partida en pleno día. |
+| # | Pieza | Zona | Acto | Distancia a la base | Por qué es peligrosa |
+|---|-------|------|------|---------------------|----------------------|
+| 1 | **Batería** | Gasolinera de la ciudad abandonada | 1 | Cerca (~230 studs) | Es la zona "tutorial". El peligro es bajo pero real: estanterías y coches donde hay que buscar haciendo ruido (abrir puertas metálicas y cajones suena). Buena para aprender el sistema de ruido de día. |
+| 2 | **Cristal de frecuencia** | Mina abandonada al pie de la montaña oeste | 1 | Media (~380 la entrada, hasta ~600 dentro) | Oscuridad total: la linterna es obligatoria. Túneles largos, gateras estrechas y una caverna al fondo. De día está vacía; de noche la criatura puede entrar. Las rocas de dentro tientan a picar (ruido). |
+| 3 | **Antena** | Azotea de una nave del distrito industrial | 2 | Lejos (~530 studs) | Es **pesada** (ver 2.2): quien la carga no puede correr ni usar escaleras de mano. Para bajarla de la azotea hay que soltarla por el pretil, y el golpe se oye. Luego hay que escoltarla hasta el puente y la base por terreno abierto. |
+| 4 | **Transceptor** | Complejo científico, desde el laboratorio hasta junto al nido | 2 | Muy lejos (~650-700 studs) | Dos sótanos sin luz. **De día la criatura duerme en el nido**: si alguien hace ruido fuerte cerca, despierta y caza aunque sea de día. Es la única pieza que puede costar la partida en pleno día. |
 
 Las distancias son orientativas para el greybox (F1-1); se ajustan en el playtest.
 
@@ -99,7 +118,7 @@ Las distancias son orientativas para el greybox (F1-1); se ajustan en el playtes
 |---|---|---|---|---|---|
 | Duración | 4 min | 4.5 min | 5 min | 5.5 min | 6 min |
 | Criatura principal | Sí | Sí | Sí | Sí | Sí |
-| Acechadores menores (máx. a la vez) | 0 | 0 | 2 | 3 | 4 |
+| Acechadores anómalos (máx. a la vez) | 0 | 0 | 2 | 3 | 4 |
 | ¿Rompe paredes? | No | Sí, lento | Sí | Sí, rápido | Sí, rápido |
 | Ataques a la base | Ninguno, solo ronda | 1 asedio | 2 asedios | 2 asedios largos | Constante |
 | Niebla (visibilidad aprox.) | 120 studs | 100 | 80 | 60 | 45 |
@@ -108,11 +127,13 @@ Las distancias son orientativas para el greybox (F1-1); se ajustan en el playtes
 | Radio seguro de la fogata | 12 studs | 10 | 8 | 6 | 0 (no hay zona segura) |
 | ¿Acechadores apagan la fogata? | — | — | Sí | Sí | Sí |
 
+Los acechadores (en el código `AcechadorMenor`) nacen en el territorio avanzado. Su máximo se aplica igual, pero mientras el puente siga roto no pueden llegar a la base: asedian solo si el puente está construido.
+
 ### Qué cambia en cada noche y para qué sirve
 
 - **Noche 1, "Algo está ahí fuera"**: enseña las reglas. La criatura se acerca a la base, rodea la fogata, se deja ver un instante en el borde de la luz y se va. Investiga luces y ruidos, pero si atrapa a alguien solo lo derriba, nunca lo mata (no hay muertes en la noche 1). El objetivo es que el jugador aprenda "la luz y el ruido la traen" sin castigo.
 - **Noche 2, "Prueba las paredes"**: primer asedio real. La criatura golpea un punto de la base hasta romperlo. Enseña que las paredes son tiempo, no seguridad. A partir de aquí se puede morir.
-- **Noche 3, "No está sola"**: aparecen los acechadores menores, más débiles y más rápidos, que salen del pantano. La luz directa de la linterna los hace retroceder (contrapeso: la luz atrae a la criatura principal). Los ataques llegan desde dos lados a la vez. Los acechadores pueden **apagar la fogata** si llegan a ella: hay que defenderla.
+- **Noche 3, "No está sola"**: aparecen los acechadores anómalos, más débiles y más rápidos, que salen del bosque anómalo. La luz directa de la linterna los hace retroceder (contrapeso: la luz atrae a la criatura principal). Si el puente está construido, cruzan y los ataques llegan desde dos lados a la vez; los acechadores pueden **apagar la fogata** si llegan a ella: hay que defenderla. Si el puente sigue roto, solo los encuentra quien esté en el territorio avanzado.
 - **Noche 4, "Sabe dónde duermes"**: la criatura aprende. Ataca el punto más débil de la base (la pared con menos HP) en vez de uno al azar y los asedios duran más. Si alguien sale solo, la criatura lo prioriza sobre la base.
 - **Noche 5, "Luna roja"**: la noche más larga y con más niebla. Si el grupo transmite, la criatura entra en frenesí: deja de acechar y va directa a la radio. Si el grupo no ha completado la radio, esta es su última oportunidad (ver sección 4).
 
@@ -128,7 +149,7 @@ Las distancias son orientativas para el greybox (F1-1); se ajustan en el playtes
 La criatura principal es siempre una sola. Con 1 jugador hay reglas extra de reaparición (sección 4).
 
 ### Días
-Los días también escalan, pero poco: desde el día 3 aparecen rastros (huellas, árboles arañados, animales muertos) más cerca de la base, y desde el día 4 puede haber un **avistamiento diurno** (la criatura se ve a lo lejos entre los árboles, sin atacar). Es tensión gratis, sin aumentar la dificultad real.
+Los días también escalan, pero poco: desde el día 3 aparecen rastros (huellas, árboles arañados, animales muertos) más cerca de la base, y desde el día 4 puede haber un **avistamiento diurno** (la criatura se ve a lo lejos entre los árboles o en la otra orilla del río, sin atacar). Es tensión gratis, sin aumentar la dificultad real.
 
 ---
 
@@ -180,8 +201,8 @@ Si el jugador se queda quieto, a oscuras y en silencio en el nivel 2-3, la criat
 
 | Fuente | Qué hace a favor | Qué hace en contra |
 |--------|------------------|--------------------|
-| **Linterna** | Ver de noche y en la mina. Desde la noche 3, hace retroceder a los acechadores menores. | La criatura la detecta a gran distancia. Gasta batería. Las pilas escasean. |
-| **Fogata principal** | Zona segura: la criatura **no entra** en su radio de luz cercana mientras esté encendida. El radio **se achica cada noche** (12 → 10 → 8 → 6 → 0 studs, ver sección 3), así que quedarse pegado al fuego no es una estrategia que gane la partida. Calor = regenera salud lenta. | Se ve desde todo el mapa: la criatura siempre sabe dónde está la base. Consume madera. Desde la noche 3 los acechadores pueden apagarla. |
+| **Linterna** | Ver de noche, en la mina y en los sótanos del complejo. Desde la noche 3, hace retroceder a los acechadores anómalos. | La criatura la detecta a gran distancia. Gasta batería. Las pilas escasean. |
+| **Fogata principal** | Zona segura: la criatura **no entra** en su radio de luz cercana mientras esté encendida. El radio **se achica cada noche** (12 → 10 → 8 → 6 → 0 studs, ver sección 3), así que quedarse pegado al fuego no es una estrategia que gane la partida. Calor = regenera salud lenta. | Se ve desde todo el mapa: la criatura siempre sabe dónde está la base. Consume madera. Desde la noche 3 los acechadores pueden apagarla (si el puente les deja llegar). |
 | **Oscuridad total** | Es la mejor forma de esconderse. | No ves nada. La niebla y el sonido son tu única información. |
 
 **Fogata apagada**: la base pierde la zona segura y la criatura puede entrar hasta la radio. Volver a encenderla tarda 5 s y hace ruido. Mantener la fogata es una tarea constante de noche: alguien tiene que salir a por madera o tenerla guardada.
@@ -193,7 +214,7 @@ Cada acción emite un evento de ruido con un radio. La criatura investiga el rui
 |--------|----------------|
 | Caminar agachado | 0 (silencio) |
 | Caminar | 10 studs |
-| Caminar en agua (pantano) | 25 studs |
+| Caminar en agua (orilla del río) | 25 studs |
 | Correr | 35 studs |
 | Talar / picar | 50 studs |
 | Construir / reparar | 45 studs |
@@ -206,8 +227,10 @@ El chat de voz de Roblox **no** genera ruido en el juego en el MVP. **[post-MVP 
 
 ### Momentos de tensión diseñados
 - **El atardecer**: la cuenta atrás de 45 s con la luz cambiando es la fuente de tensión más fiable del juego. Volver con una pieza pesada contra el reloj.
-- **La mina**: entrar a oscuras, encender la linterna sabiendo que la criatura duerme ahí.
-- **El pantano**: no ver más de unos metros y que cada paso suene.
+- **El complejo**: bajar dos sótanos a oscuras, encender la linterna sabiendo que la criatura duerme ahí abajo.
+- **El puente**: construirlo junto al agua por donde cruza la criatura, sabiendo que al terminarlo también se abre el paso a los acechadores.
+- **La mina**: túneles largos y gateras sin luz; no hay nido, pero de noche no está garantizado que esté vacía.
+- **El bosque anómalo**: luz que no es de la fogata, árboles que no son de aquí y un silencio que no se rompe.
 - **La fogata baja**: la llama se reduce visiblemente cuando queda poca madera. Todo el grupo lo ve.
 - **La pared que cruje**: durante un asedio, la pared golpeada muestra grietas y suena distinto a medida que pierde HP. Todos saben por dónde va a entrar.
 - **El silencio a mitad de la noche**: la criatura se retira un rato. Que no pase nada también asusta.
@@ -231,7 +254,7 @@ En el MVP el director es solo un temporizador de fases dentro de la noche. Post-
 | Área | Incluye |
 |------|---------|
 | Partida | Co-op 1-4, lobby simple, 5 noches, victoria y derrota, pantalla final con estadísticas |
-| Mapa | 1 mapa: claro de la base + 4 zonas de piezas (gasolinera, torre, pantano, mina), 3 puntos de aparición por pieza |
+| Mapa | 1 mapa en dos territorios unidos por un puente reconstruible: base, ciudad con gasolinera y mina (acto 1); distrito industrial, bosque anómalo y complejo científico (acto 2). 4 zonas de piezas con 3 puntos de aparición cada una. Torre como mirador secundario |
 | Objetivo | 4 piezas, radio con 4 huecos, transmisión de 3 min, rescate al amanecer |
 | Jugador | Primera persona, estamina, salud, agacharse, linterna con batería, caer/revivir/reaparecer |
 | Recursos | Madera, piedra, pilas, chatarra |
@@ -270,6 +293,10 @@ Aprobados por Mario: D1, D2, D3, 5 noches y tabla de dificultad, antena pesada, 
 3. **Segunda oportunidad en solitario**: una por noche en vez de una por partida.
 
 **Pendiente:** D4, nombre del juego ("Frecuencia Muerta" es la propuesta).
+
+### Rediseño del mundo en dos actos (2026-11-27)
+
+Aprobado por Mario: dos territorios separados por un río; el puente como única conexión, reconstruido a mitad de partida sin tiempos artificiales; criatura principal que cruza a nado desde la noche 1; acechadores anómalos que solo cruzan por el puente construido; mina sin nido (dificultad media, minerales); nido en los sótanos del complejo científico; bosque anómalo preparado para mecánicas futuras; piezas en gasolinera, mina, distrito industrial y complejo; Antena en una azotea industrial; narrativa ambiental (consecuencias al sur, origen escondido al norte). El pantano desaparece y la torre queda como mirador opcional. Implementación del puente: Fase 3. En F1 solo hay un comando de debug en Studio.
 
 ## 8. Siguientes documentos que dependen de este
 

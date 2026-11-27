@@ -15,6 +15,7 @@ local lastSnapshot: { [Player]: number } = {}
 local lastError: { [Player]: number } = {}
 local revisions: { [Player]: number } = {}
 local session: any
+local world: any
 
 local function currentRunId(): string
 	return session.GetRunId() or ""
@@ -46,6 +47,7 @@ function Service.Init(context: { [string]: unknown })
 	playerConfig = (context.Configs :: any).PlayerConfig
 	objectivesConfig = (context.Configs :: any).ObjectivesConfig
 	session = (context.Services :: any).SessionService
+	world = (context.Services :: any).WorldService
 	Guard.Init(network)
 end
 
@@ -147,6 +149,19 @@ function Service.BindRemotes()
 		end
 		result(player, payload, players.SetFlashlight(player, payload.enabled), "Ok")
 		Service.PublishSnapshot(player)
+	end)
+	-- Debug del puente: solo Studio, la decision y el cambio los hace el servidor.
+	bind("DebugBridge", function(player, payload)
+		if not RunService:IsStudio() then
+			result(player, payload, false, "Forbidden")
+			return
+		end
+		if payload.runId ~= currentRunId() or payload.runId == "" then
+			result(player, payload, false, "StaleRun")
+			return
+		end
+		local ok = world.setBridgeBuilt(payload.enabled)
+		result(player, payload, ok, if ok then "Ok" else "InvalidState")
 	end)
 	for _, name in
 		{

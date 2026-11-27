@@ -47,6 +47,17 @@ Todas las partes autoritativas ancladas. Cliente no elige Health, costo, dueño,
 
 Solo encendida y HP>0 registra luz, regeneración y zona segura. Radio seguro 12/10/8/6/0 desde NightsConfig; la curación usa su propio radio de 8 y continúa en noche 5. Estos radios no permiten bloquear daño mediante una propiedad del cliente. Fogata y radio se excluyen de propagación de destrucción de cimientos (se apoyan en terreno fijo).
 
+## Puente (spec, implementación en Fase 3)
+
+Estructura de mundo única, fuera del grid y de las 4 piezas: reconstruye el tramo central del puente volado entre los dos territorios ([mapa](mapa.md) 2.2). No cuenta para el máximo de 120 estructuras, no tiene HP en MVP y la IA no lo destruye.
+
+- **Dónde:** solo en `Markers/BridgeSite` (`BridgeId = "Principal"`, `Segments = 3`). No usa `PlaceStructure` ni BuildZones; la Fase 3 añade una acción propia (`BuildBridgeSegment`, Remote a declarar entonces) con validación de servidor: Alive, manos libres, alcance 8 al borde activo (`BridgeEnds/Sur` o el último tramo hecho), LOS, cooldown y materiales.
+- **Tramos:** 3, en orden desde la orilla sur. Cada tramo: hold de 5 s, ruido `BuildRepair` (45 studs) al inicio y cada segundo válido. Sin tramos parciales en el centro: el tramo 2 exige el 1, el 3 exige el 2. Varios jugadores no pueden construir el mismo tramo a la vez (reserva `bridge:<n>`).
+- **Coste propuesto por tramo:** 10 Madera + 6 Piedra + 3 Chatarra (total 30 + 18 + 9). Está pensado para que el puente caiga hacia el día 3 con los recursos del acto 1 (88 de los 110 nodos están al sur del río) y la chatarra de la ciudad y la mina. Se ajusta en playtest; va en `StructuresConfig.Bridge`.
+- **Resultado:** con el tramo 3 hecho, el servidor activa la variante construida (`BridgeBuilt = true`), la misma función que usa el comando de debug de Studio (objetivos.md). Antes de eso, los tramos 1 y 2 son visibles pero el hueco restante no se puede saltar.
+- **Efectos de diseño:** el puente abre el acto 2 y deja pasar a los acechadores (GDD 2.0). No cambia la curva de noches.
+- Se reinicia a roto en cada run. No se guarda en datos meta.
+
 ## Pruebas futuras en Studio
 
 Verificar medidas y Attachments, snapping en bordes compartidos, rechazo de cimientos flotantes/pendientes, ocupación simultánea del mismo socket, cap, materiales insuficientes y construcción desde detrás de paredes. Comprobar HP escalado solo en paredes/marcos, puerta sin aplastar, reparación a full sin cobrar, destrucción de soportes, combustible máximo, apagado enemigo y reencendido en 5 s. Cerrar una puerta con un enemigo en el hueco debe rechazarse. Preview verde nunca obliga al servidor a aceptar.

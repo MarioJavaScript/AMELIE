@@ -38,7 +38,9 @@ Tabla aprobada del GDD §3, duraciones expresadas en segundos para config:
 | 3 | 1.0 | 1.0 | 1.0 |
 | 4 | 1.0 | 1.0 | 1.0 |
 
-**Decisión de spec:** redondear menores hacia abajo para todos los tamaños; caps efectivos noches 3/4/5: solo 1/1/2, dúo 1/2/3, tres/cuatro 2/3/4. Nunca escalar la criatura principal ni multiplicar caps durante frenesí. Fijar HP al construir con factor congelado, no curar al cambiar noche. Producción usa residuos según inventario; no redondear 1.2 a 1 cada golpe.
+**Decisión de spec:** redondear menores hacia abajo para todos los tamaños; caps efectivos noches 3/4/5: solo 1/1/2, dúo 1/2/3, tres/cuatro 2/3/4. Nunca escalar la criatura principal ni multiplicar caps durante frenesí.
+
+**Rediseño en dos actos (2026-11-27):** la tabla no cambia. `MaxStalkers` sigue siendo el tope global de acechadores vivos; nacen en el territorio avanzado ([mapa](mapa.md) 6.1) y solo pueden llegar a la base si el puente está construido (`BridgeBuilt`). El director no lee el puente ni ajusta su agenda por él: si el puente sigue roto, un Peak con acechadores solo afecta a quien esté al norte del río. La criatura principal cruza a nado en cualquier noche. No hay tiempos ligados al puente. Fijar HP al construir con factor congelado, no curar al cambiar noche. Producción usa residuos según inventario; no redondear 1.2 a 1 cada golpe.
 
 ## Director simple
 
@@ -58,7 +60,7 @@ Tras una caída fuera de frenesí, fuerza Rest al menos 50 s (puede terminar ant
 
 Transmitir activa Frenzy, incluso mientras esté pausada por golpe; termina al amanecer/final. **Decisión de spec:** Frenzy suspende descansos y cuota de asedios; conserva cantidad de enemigos, safe radius y protección de noche 1. En noche 1 puede haber presión sobre la radio y pausas por golpe, pero no rotura de paredes ni muerte individual. La IA debe seguir dando aviso previo al ataque; F4-1/F4-2 define señales, sin bypass por frenesí.
 
-De día no hay caza normal; la excepción del nido se comunica por StimulusService (F4 determina despertar/retorno). Desde día 3 se activan marcadores de rastros y desde día 4 un avistamiento visual sin ataque: `NightsConfig.DayTracesFrom=3`, `DaySightingsFrom=4`; ubicación y assets en World/PresentationConfig. No se crea una segunda criatura para el avistamiento.
+De día no hay caza normal; la excepción del nido (sótanos del complejo científico) se comunica por StimulusService (F4 determina despertar/retorno). Desde día 3 se activan marcadores de rastros y desde día 4 un avistamiento visual sin ataque: `NightsConfig.DayTracesFrom=3`, `DaySightingsFrom=4`; ubicación y assets en World/PresentationConfig. No se crea una segunda criatura para el avistamiento.
 
 ## Resolución terminal
 
