@@ -31,4 +31,5 @@ return {
 		"NoBuildZones",
 	},
 	ProtectedRadiusStuds = 4,
+	MapBounds = { MinX = -760, MaxX = 760, MinZ = -760, MaxZ = 760, MinY = -20, MaxY = 300 },
 }

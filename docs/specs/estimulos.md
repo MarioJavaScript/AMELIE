@@ -31,6 +31,7 @@ Valores aprobados en `src/shared/config/StimuliConfig.luau`:
 | `Revive` | 30 studs | Revive mantenido válido |
 | `DownedShout` | 60 studs | Caído y cooldown cumplido |
 | `RadioTransmission` | Global (todo mapa) | Fuente continua Transmitting |
+| `PieceImpact` | 60 studs | Pieza soltada que cae más de `ObjectivesConfig.ImpactMinDropStuds` y toca el suelo (caso típico: Antena desde la torre, ver [objetivos](objetivos.md)). Impulso único en el punto de impacto |
 
 **Decisión de spec:** clases adicionales necesarias: `IgniteCampfire`=45 studs, `WoodDoor`=10 studs. Feedback de instalar pieza y crafting son cosméticos y no crean ruido de IA adicional. `StimuliConfig` contiene estos radios, `ShoutCooldownSeconds=5`, `ImpulseLifetimeSeconds=2`, `ContinuousRefreshSeconds=0.5`, `MovementStepSeconds=0.5`, `InteractionNoiseSeconds=1`. Revive/reparación/encendido emiten al inicio y cada segundo válido; cancelar no borra ruido ya emitido. Ruido de construcción solo al confirmar; intentos inválidos no atraen enemigos artificialmente.
 
