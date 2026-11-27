@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("types"))
 local PresentationConfig = require(Shared:WaitForChild("config"):WaitForChild("PresentationConfig"))
+local ObjectivesConfig = require(Shared:WaitForChild("config"):WaitForChild("ObjectivesConfig"))
 local DebugCommands = require(script.Parent.Parent:WaitForChild("DebugCommands"))
 
 local Controller = {}
@@ -18,6 +19,7 @@ type BarState = { shown: number, target: number, max: number }
 
 local controllers: { [string]: any } = {}
 local views: { [string]: any } = {}
+local remotes: { [string]: RemoteEvent } = {}
 local connections: { RBXScriptConnection } = {}
 local unsubscribers: { () -> () } = {}
 local hud: any = nil
@@ -83,6 +85,7 @@ end
 function Controller.Init(context: Context)
 	controllers = context.Controllers :: { [string]: any }
 	views = context.Views :: { [string]: any }
+	remotes = context.Remotes :: { [string]: RemoteEvent }
 end
 
 function Controller.Start()
@@ -103,6 +106,18 @@ function Controller.Start()
 		selfView.battery = tonumber(args[3]) or selfView.battery
 		state.DebugInject({ self = selfView })
 		state.DebugPatchSelfPlayer({ health = tonumber(args[1]) or 100 })
+	end)
+
+	-- Solo Studio: /puente on|off pide al servidor construir o romper el puente (el servidor decide y valida).
+	DebugCommands.Register(ObjectivesConfig.Bridge.DebugCommand, function(args: { string })
+		if args[1] ~= "on" and args[1] ~= "off" then
+			warn("Uso: /" .. ObjectivesConfig.Bridge.DebugCommand .. " on|off")
+			return
+		end
+		local request = controllers.StateController.NewRequest()
+		local payload: Types.DebugBridge =
+			{ requestId = request.requestId, runId = request.runId, enabled = args[1] == "on" }
+		remotes.DebugBridge:FireServer(payload)
 	end)
 end
 

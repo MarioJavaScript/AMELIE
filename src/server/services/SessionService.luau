@@ -13,13 +13,17 @@ export type Context = { [string]: unknown }
 
 local connections: { RBXScriptConnection } = {}
 local currentRunId: string? = nil
+local world: any
 
-function Service.Init(_context: Context) end
+function Service.Init(context: Context)
+	world = (context.Services :: any).WorldService
+end
 
 -- Crea una run con un runId nuevo (ASCII alfanumerico y guion, <= 64 bytes: ver remotes.md) y lo devuelve.
 function Service.BeginRun(): string
 	local runId = "dev_" .. HttpService:GenerateGUID(false)
 	currentRunId = runId
+	world.BeginRun(runId)
 	return runId
 end
 

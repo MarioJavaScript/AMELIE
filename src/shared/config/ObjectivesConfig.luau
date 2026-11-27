@@ -12,20 +12,34 @@ return {
 	TransmissionSeconds = 180,
 	Pieces = {
 		Bateria = {
-			Zone = "Gasolinera",
-			ApproxDistanceStuds = 150,
+			Zone = "Ciudad",
+			ApproxDistanceStuds = 230,
 			Prefab = "PiezaBateria",
 			Heavy = false,
 			SpawnCount = 3,
 		},
-		Antena = { Zone = "Torre", ApproxDistanceStuds = 300, Prefab = "PiezaAntena", Heavy = true, SpawnCount = 3 },
+		Antena = {
+			Zone = "Industrial",
+			ApproxDistanceStuds = 530,
+			Prefab = "PiezaAntena",
+			Heavy = true,
+			SpawnCount = 3,
+		},
 		Transceptor = {
-			Zone = "Pantano",
-			ApproxDistanceStuds = 450,
+			Zone = "Complejo",
+			ApproxDistanceStuds = 650,
 			Prefab = "PiezaTransceptor",
 			Heavy = false,
 			SpawnCount = 3,
 		},
-		Cristal = { Zone = "Mina", ApproxDistanceStuds = 600, Prefab = "PiezaCristal", Heavy = false, SpawnCount = 3 },
+		Cristal = { Zone = "Mina", ApproxDistanceStuds = 470, Prefab = "PiezaCristal", Heavy = false, SpawnCount = 3 },
+	},
+	-- Puente roto entre territorios (docs/specs/mapa.md 2.2): variante construida y comando de debug en Studio.
+	Bridge = {
+		MapPath = "Map/Puente",
+		BuiltVariantPath = "MapVariants/PuenteConstruido", -- bajo ServerStorage
+		BuiltAttribute = "BridgeBuilt",
+		BuiltChildName = "Construido",
+		DebugCommand = "puente",
 	},
 }

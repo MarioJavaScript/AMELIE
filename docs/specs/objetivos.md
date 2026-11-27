@@ -4,12 +4,16 @@ Base: GDD §2 y §4. ObjectiveService es dueño del estado compartido y del relo
 
 ## Piezas y aparición
 
-| PieceId | Nombre | Zona / distancia orientativa | Prefab | Pesada |
-|---|---|---|---|---|
-| `Bateria` | Batería | Gasolinera / 150 studs | PiezaBateria | No |
-| `Antena` | Antena | Torre / 300 studs | PiezaAntena | Sí |
-| `Transceptor` | Transceptor | Pantano / 450 studs | PiezaTransceptor | No |
-| `Cristal` | Cristal de frecuencia | Mina / 600 studs | PiezaCristal | No |
+| PieceId | Nombre | Zona (ZoneId) / distancia orientativa | Acto | Prefab | Pesada |
+|---|---|---|---|---|---|
+| `Bateria` | Batería | `Ciudad` (gasolinera) / 230 studs | 1 | PiezaBateria | No |
+| `Cristal` | Cristal de frecuencia | `Mina` / 470 studs | 1 | PiezaCristal | No |
+| `Antena` | Antena | `Industrial` (azoteas) / 530 studs | 2 | PiezaAntena | Sí |
+| `Transceptor` | Transceptor | `Complejo` (junto al nido) / 650 studs | 2 | PiezaTransceptor | No |
+
+Rediseño en dos actos (2026-11-27, [mapa](mapa.md)): las piezas del acto 2 solo son alcanzables con el puente construido. ObjectiveService no comprueba el puente: la geografía lo garantiza. Las 4 piezas se eligen y clonan al empezar la run como siempre; las del acto 2 se revelan igual, al entrar en su zona.
+
+**Estado del puente (F1, solo Studio):** el puente es parte del mundo, no un objetivo. Su estado vive en el atributo `BridgeBuilt` de `Workspace/Map/Puente` y lo cambia solo el servidor. WorldService lo pone en roto al empezar cada run. Hasta la Fase 3 la única forma de construirlo es el comando de debug `puente` (on/off), disponible solo si `RunService:IsStudio()` es verdadero, nunca en servidores publicados: clona `ServerStorage/MapVariants/PuenteConstruido` en `Map/Puente/Construido`, o lo destruye. Los valores (`BridgeDebugCommand`, nombres de rutas) van en `ObjectivesConfig.Bridge`.
 
 World exige exactamente tres marcadores `ObjectiveSpawns/<PieceId>/01`, `02`, `03` por pieza, dentro de su zona. Servidor elige uniformemente uno al comenzar run y clona una única pieza. No se cambia punto por visita ni por reaparecer un jugador. RNG/elección no vienen del cliente. Distancias sirven para greybox, no para aceptar pickups; se validan accesibilidad y ausencia de encierros en playtest.
 
@@ -29,7 +33,7 @@ Rango 8 studs y LOS en inicio y fin, chequeo continuo cada 0.1 s (`InteractionCo
 
 Con manos ocupadas se puede mover, agachar, gritar si se cae y usar linterna integrada, pero no golpear, craftear, colocar/reparar, saquear, recargar, curar, revivir ni operar fogata/puertas/transmisión. Instalar/soltar son excepciones explícitas. Antena limita velocidad según PlayerConfig. Puertas necesitan compañero o soltar primero.
 
-**Decisión de spec (Antena y escaleras):** quien carga la Antena no puede usar escaleras (TrussPart ni escaleras de mano de Studio). El servidor lo impide: mientras haya portador de Antena, su estado de trepar queda bloqueado y una subida o bajada por escalera se trata como movimiento inválido. Para bajarla de la torre se suelta desde arriba con `DropObjective`: si el punto a `DropForwardStuds` delante no tiene suelo en la plataforma, el raycast del servidor sigue hacia abajo hasta el primer suelo seguro y la pieza cae ahí. Al tocar el suelo queda anclada en World con su brillo de drop y emite `PieceImpact` (60 studs, ver [estimulos](estimulos.md)) en el punto de impacto. Solo emite impacto si la caída vertical supera `ObjectivesConfig.ImpactMinDropStuds` (pendiente de añadir a config; propuesta 4 studs). Si el punto de caída no es válido, aplica el watchdog. La cabina y el descanso de la torre tienen un hueco en la barandilla para soltarla (ver [mapa](mapa.md)). El resto de piezas sí permiten escaleras.
+**Decisión de spec (Antena y escaleras):** quien carga la Antena no puede usar escaleras (TrussPart ni escaleras de mano de Studio). El servidor lo impide: mientras haya portador de Antena, su estado de trepar queda bloqueado y una subida o bajada por escalera se trata como movimiento inválido. Las azoteas del distrito industrial solo tienen escaleras de incendios (TrussPart): para bajar la Antena se suelta desde la azotea con `DropObjective`: si el punto a `DropForwardStuds` delante no tiene suelo en la azotea, el raycast del servidor sigue hacia abajo hasta el primer suelo seguro y la pieza cae ahí. Al tocar el suelo queda anclada en World con su brillo de drop y emite `PieceImpact` (60 studs, ver [estimulos](estimulos.md)) en el punto de impacto. Solo emite impacto si la caída vertical supera `ObjectivesConfig.ImpactMinDropStuds` (4 studs). Si el punto de caída no es válido, aplica el watchdog. Cada azotea tiene un hueco de 4 en el pretil sobre una zona de caída despejada: la nave sobre el patio de carga y las oficinas sobre su lado este (ver [mapa](mapa.md)). El spawn `Antena/03` está en el suelo del almacén y no exige soltarla. Escaleras normales de peldaños (las de los sótanos del complejo) no son trepar y sí se pueden usar con la Antena. El resto de piezas sí permiten escaleras.
 
 ## Radio y transmisión
 
@@ -47,4 +51,4 @@ Estados: `Incomplete`, `Ready`, `Transmitting`, `Paused`, `Complete`. `Installed
 
 ## Pruebas futuras en Studio
 
-Verificar 12 marcadores y cuatro piezas por run, distribución al reiniciar, recogida simultánea, cancelación de hold, bloqueo de manos, antena y drop en desconexión/caída. Instalar dos veces no suma dos. Probar pérdida bajo mapa, radio inmutable, inicio diurno rechazado, golpe que pausa, 3 s de reactivación, 180 s activos, progreso entre noches, finalización exacta en frontera y rescate temprano sin saltar la noche restante.
+Verificar 12 marcadores y cuatro piezas por run, comando `puente` solo en Studio (on/off idempotente, rechazado fuera de Studio) y reset del puente a roto al empezar la run, distribución al reiniciar, recogida simultánea, cancelación de hold, bloqueo de manos, antena y drop en desconexión/caída. Instalar dos veces no suma dos. Probar pérdida bajo mapa, radio inmutable, inicio diurno rechazado, golpe que pausa, 3 s de reactivación, 180 s activos, progreso entre noches, finalización exacta en frontera y rescate temprano sin saltar la noche restante.

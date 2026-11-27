@@ -16,6 +16,7 @@ local NAMES = {
 	"BeginInteraction",
 	"CancelInteraction",
 	"Shout",
+	"DebugBridge",
 	"StateSnapshot",
 	"ActionResult",
 	"InteractionState",

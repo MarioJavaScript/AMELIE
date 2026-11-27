@@ -34,6 +34,7 @@ export type DropObjective = Req
 export type BeginInteraction = Req & { action: InteractionAction, targetId: string }
 export type CancelInteraction = Req & { interactionId: string }
 export type Shout = Req
+export type DebugBridge = Req & { enabled: boolean }
 export type Phase = "Lobby" | "Day" | "Dusk" | "Night" | "Dawn" | "Result"
 export type ItemId = "Madera" | "Piedra" | "Pila" | "Chatarra" | "Hacha" | "Pico" | "Venda"
 export type PieceId = "Bateria" | "Antena" | "Transceptor" | "Cristal"
