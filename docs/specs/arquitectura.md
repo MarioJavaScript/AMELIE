@@ -74,7 +74,8 @@ Rojo administra solo estos subárboles, preservando instancias desconocidas en s
 ## Contenido de Studio
 
 - `Workspace/Map`: terreno, caseta, radio fija indestructible, agua, mina, volúmenes de zonas y superficie permitida para construir. Lighting inicial y assets de audio son contenido artístico de Studio.
-- `Workspace/Markers`: `BaseSpawn`, `RadioSocket`, `CampfireSocket`, `ObjectiveSpawns/<PieceId>/01..03`, `ResourceSpawns`, `LootSpawns`, `EnemySpawns`, `Nest`, `WaterZones`, `BuildZones`, `NoBuildZones`. IDs de autoría únicos; distancias y distribución se validan contra configs. Marcadores no colisionan.
+- `Workspace/Markers`: `BaseSpawn`, `RadioSocket`, `CampfireSocket`, `ObjectiveSpawns/<PieceId>/01..03`, `ResourceSpawns`, `LootSpawns`, `EnemySpawns`, `Nest`, `WaterZones`, `BuildZones`, `NoBuildZones`, `PatrolPoints/<RouteId>/NN`, `Hideouts`. IDs de autoría únicos; distancias y distribución se validan contra configs. Marcadores no colisionan. Coordenadas, atributos y nombres exactos en [mapa](mapa.md).
+- Tags de CollectionService (duplican las carpetas, que siguen siendo la fuente de verdad): `MapZone` (volúmenes de `Map/Zones`), `PieceSpawn`, `ResourceSpawn`, `LootSpawn`, `EnemySpawn`, `Nest`, `WaterZone`, `BuildZone`, `NoBuildZone`, `PatrolPoint`, `Hideout`. Los servicios pueden usar `GetTagged` o recorrer la carpeta; ambos deben dar el mismo conjunto.
 - `ServerStorage/Prefabs`: `Cimiento`, `Pared`, `MarcoPuerta`, `Fogata`, `CriaturaPrincipal`, `AcechadorMenor`, `Arbol`, `Roca`, `Mochila`, `Pila`, `Chatarra`, `PiezaBateria`, `PiezaAntena`, `PiezaTransceptor`, `PiezaCristal`. Nombres de búsqueda en `WorldConfig`; prefabs sin Scripts. Hitboxes, pivotes y Attachments se detallan en cada spec.
 - `Workspace/Runtime`: carpeta creada en servidor para clones de cada run. Nunca se borra Map al reiniciar. Nodos y loot se restauran desde marcadores/prefabs.
 

@@ -17,7 +17,7 @@ Primera persona durante juego; espectador puede seguir compañeros. Cámara y vi
 | Umbral para volver a correr tras agotar | 20 |
 | Salto | Deshabilitado en MVP; se usan rampas/escaleras de Studio |
 
-`SetMovementMode` solicita Walk/Sprint/Crouch. El servidor deriva velocidad según vida, pieza y estamina; Sprint+Crouch no coexisten. Cargar pieza no pesada permite correr, pero no usar herramientas, construir ni acciones de inventario. Antena impide Sprint. Escalar usa la velocidad Walk o la de antena; pantano no modifica velocidad en MVP, sí ruido.
+`SetMovementMode` solicita Walk/Sprint/Crouch. El servidor deriva velocidad según vida, pieza y estamina; Sprint+Crouch no coexisten. Cargar pieza no pesada permite correr, pero no usar herramientas, construir ni acciones de inventario. Antena impide Sprint y escaleras (ver [objetivos](objetivos.md)). Escalar usa la velocidad Walk; pantano no modifica velocidad en MVP, sí ruido.
 
 El cliente no envía estamina ni desplazamientos premiables. El servidor muestrea movimiento, limita desplazamiento horizontal según modo y tiempo y corrige a la última posición válida. `NetworkConfig`: muestreo 0.1 s, tolerancia de desplazamiento 3 studs, ventana 0.5 s; teleports de spawn/revive se registran como autorizados y reinician referencia. Acciones a distancia siempre usan posición validada y raycast servidor. La simulación física normal de Roblox no constituye autoridad de inventario.
 

@@ -12,6 +12,7 @@ return {
 		DownedShout = 60,
 		IgniteCampfire = 45,
 		WoodDoor = 10,
+		PieceImpact = 60,
 	},
 	ShoutCooldownSeconds = 5,
 	ImpulseLifetimeSeconds = 2,

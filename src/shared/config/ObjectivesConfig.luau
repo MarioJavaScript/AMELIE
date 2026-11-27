@@ -6,6 +6,7 @@ return {
 	ResumeHoldSeconds = 3,
 	DropForwardStuds = 3,
 	DropCooldownSeconds = 0.5,
+	ImpactMinDropStuds = 4,
 	RecoveryIntervalSeconds = 1,
 	RevealRadiusStuds = 60,
 	TransmissionSeconds = 180,
