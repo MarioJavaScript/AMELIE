@@ -18,6 +18,14 @@ local CollectionService = game:GetService("CollectionService")
 local Terrain = Workspace.Terrain
 local Mat = Enum.Material
 local v3, v2 = Vector3.new, Vector2.new
+-- FillBlock/FillBall dejan la superficie 2 studs por encima del borde nominal (celdas de 4): se compensa aqui.
+local TERRAIN_DY = -2
+local function fillBlock(cf: CFrame, size: Vector3, mat: Enum.Material)
+	Terrain:FillBlock(cf + v3(0, TERRAIN_DY, 0), size, mat)
+end
+local function fillBall(c: Vector3, r: number, mat: Enum.Material)
+	Terrain:FillBall(c + v3(0, TERRAIN_DY, 0), r, mat)
+end
 
 --------------------------------------------------------------------------------------------------
 -- DATOS (mapa.md). Los Vector2 son (X, Z).
@@ -92,7 +100,7 @@ local ISLETS = {
 	{ pos = v2(-365, 315), r = 12 },
 	{ pos = v2(-340, 380), r = 10 },
 	{ pos = v2(-405, 305), r = 8 },
-	{ pos = v2(-260, 390), r = 12 },
+	{ pos = v2(-268, 372), r = 12 },
 }
 local MOUNTAINS = {
 	{ c = v3(400, -127, -797), r = 377, mat = Mat.Rock },
@@ -112,9 +120,10 @@ local RUBBLE = {
 	{ c = v3(172, 0, 224), r = 8 },
 }
 -- Excavacion de la mina (2.4). Tunel A alargado a 80 de largo para enlazar con la galeria (la spec dejaba 5 de roca).
+-- Ancho de gateras y nicho 8 (no 6): el terreno usa celdas de 4 y un hueco de 6 queda con ribs parciales sin suelo.
 local EXCAVATIONS = {
 	{ c = v3(400, 6, -465), s = v3(12, 12, 80) },
-	{ c = v3(409, 3, -470), s = v3(6, 6, 6) },
+	{ c = v3(408, 4, -472), s = v3(8, 8, 8) },
 	{ c = v3(400, 7, -520), s = v3(40, 14, 30) },
 	{ c = v3(360, 5, -520), s = v3(40, 10, 10) },
 	{ c = v3(340, 5, -555), s = v3(10, 10, 60) },
@@ -122,9 +131,9 @@ local EXCAVATIONS = {
 	{ c = v3(340, 35, -600), s = v3(8, 30, 8) },
 	{ c = v3(400, 6, -577), s = v3(12, 12, 84) },
 	{ c = v3(420, 9, -640), s = v3(50, 18, 40) },
-	{ c = v3(367.5, 4, -600), s = v3(25, 8, 6) },
-	{ c = v3(380, 4, -620), s = v3(6, 8, 40) },
-	{ c = v3(387.5, 4, -640), s = v3(15, 8, 6) },
+	{ c = v3(367.5, 4, -600), s = v3(25, 8, 8) },
+	{ c = v3(380, 4, -620), s = v3(8, 8, 40) },
+	{ c = v3(387.5, 4, -640), s = v3(15, 8, 8) },
 }
 local MINE_FRAMES = {
 	{ axis = "Z", c = 400, from = -455, to = -503, step = -12, w = 12, h = 12 },
@@ -692,46 +701,47 @@ local function carve(a: Vector2, b: Vector2, width: number)
 	local a3, b3 = v3(a.X, 0, a.Y), v3(b.X, 0, b.Y)
 	local cf = CFrame.lookAt((a3 + b3) / 2, b3)
 	local len = (b3 - a3).Magnitude + 10
-	Terrain:FillBlock(cf * CFrame.new(0, 1, 0), v3(width, 8, len), Mat.Air)
-	Terrain:FillBlock(cf * CFrame.new(0, -5, 0), v3(width, 4, len), Mat.Mud)
-	Terrain:FillBlock(cf * CFrame.new(0, -2, 0), v3(width, 2, len), Mat.Water)
+	fillBlock(cf * CFrame.new(0, 1, 0), v3(width, 8, len), Mat.Air)
+	fillBlock(cf * CFrame.new(0, -5, 0), v3(width, 4, len), Mat.Mud)
+	fillBlock(cf * CFrame.new(0, -1, 0), v3(width, 4, len), Mat.Water)
 end
 
 local function terreno(_map: Folder)
 	for x = -800, 600, 200 do
 		for z = -800, 600, 200 do
-			Terrain:FillBlock(CFrame.new(x + 100, -8, z + 100), v3(200, 16, 200), Mat.Grass)
+			fillBlock(CFrame.new(x + 100, -8, z + 100), v3(200, 16, 200), Mat.Grass)
 			task.wait()
 		end
 	end
-	Terrain:FillBall(HILL.c, HILL.r, Mat.Grass)
+	fillBall(HILL.c, HILL.r, Mat.Grass)
 	task.wait()
 	for _, b in MOUNTAINS do
-		Terrain:FillBall(b.c, b.r, b.mat)
+		fillBall(b.c, b.r, b.mat)
 		task.wait()
 	end
 	for _, o in outcrops() do
-		Terrain:FillBall(v3(o.X, hillY(o.X, o.Y) - 2, o.Y), 7, Mat.Rock)
+		fillBall(v3(o.X, hillY(o.X, o.Y) - 2, o.Y), 7, Mat.Rock)
 	end
 	for _, b in RUBBLE do
-		Terrain:FillBall(b.c, b.r, Mat.Rock)
+		fillBall(b.c, b.r, Mat.Rock)
 	end
 	task.wait()
 	for i = 1, #STREAM - 1 do
 		carve(STREAM[i], STREAM[i + 1], STREAM_WIDTH)
 	end
 	local bc = v3((BASIN.x0 + BASIN.x1) / 2, 0, (BASIN.z0 + BASIN.z1) / 2)
-	Terrain:FillBlock(CFrame.new(bc + v3(0, 1, 0)), v3(200, 8, 200), Mat.Air)
-	Terrain:FillBlock(CFrame.new(bc + v3(0, -5, 0)), v3(200, 4, 200), Mat.Mud)
-	Terrain:FillBlock(CFrame.new(bc + v3(0, -2, 0)), v3(200, 2, 200), Mat.Water)
+	fillBlock(CFrame.new(bc + v3(0, 1, 0)), v3(200, 8, 200), Mat.Air)
+	fillBlock(CFrame.new(bc + v3(0, -5, 0)), v3(200, 4, 200), Mat.Mud)
+	fillBlock(CFrame.new(bc + v3(0, -1, 0)), v3(200, 4, 200), Mat.Water)
 	for _, isl in ISLETS do
 		local inner = isl.r - 4
-		Terrain:FillBall(v3(isl.pos.X, 1 - isl.r, isl.pos.Y), isl.r, Mat.Mud)
-		Terrain:FillBall(v3(isl.pos.X, 1 - inner, isl.pos.Y), inner, Mat.LeafyGrass)
+		fillBall(v3(isl.pos.X, 1.5 - isl.r, isl.pos.Y), isl.r, Mat.Mud)
+		fillBall(v3(isl.pos.X, 2.5 - inner, isl.pos.Y), inner, Mat.LeafyGrass)
 	end
 	task.wait()
 	for _, e in EXCAVATIONS do
-		Terrain:FillBlock(CFrame.new(e.c), e.s, Mat.Air)
+		-- El aire se queda corto (celdas de 4): ensanchar 2 por lado y subir el techo 4 deja el hueco util que pide la spec.
+		fillBlock(CFrame.new(e.c + v3(0, 2, 0)), e.s + v3(4, 4, 4), Mat.Air)
 	end
 end
 
@@ -957,6 +967,22 @@ local function mina(map: Folder)
 	end
 end
 
+-- Variantes de arbol decorativo (solo Parts dentro de Map/Bosque, no son prefabs). Cada copa: tamano, altura del centro
+-- sobre el suelo y color; el tronco es { alto, grosor }. Todo se multiplica por la escala del arbol.
+type Crown = { size: Vector3, y: number }
+type TreeVariant = { trunk: number, color: Color3, crowns: { Crown } }
+local FOREST_JITTER = 8
+local TREE_VARIANTS: { TreeVariant } = {
+	{ trunk = 25, color = C.Forest, crowns = { { size = v3(7, 18, 7), y = 25 } } }, -- alto y estrecho
+	{ trunk = 19, color = Color3.fromRGB(26, 62, 34), crowns = { { size = v3(15, 10, 15), y = 21 } } }, -- copa ancha
+	{
+		trunk = 24,
+		color = Color3.fromRGB(48, 64, 54),
+		crowns = { { size = v3(12, 8, 12), y = 17 }, { size = v3(8, 8, 8), y = 26 } },
+	}, -- dos niveles, tono gris
+}
+local TREE_SCALE_MIN, TREE_SCALE_MAX = 0.8, 1.3
+
 local function bosque(map: Folder)
 	local f = fresh(map, "Bosque")
 	local trees = folder(f, "Arboles")
@@ -965,7 +991,10 @@ local function bosque(map: Folder)
 	local cand: { Vector2 } = {}
 	for gx = -PLAY_LIMIT, PLAY_LIMIT, 18 do
 		for gz = -PLAY_LIMIT, PLAY_LIMIT, 18 do
-			local x, z, roll = gx + rng:NextNumber(-6, 6), gz + rng:NextNumber(-6, 6), rng:NextNumber()
+			local x, z, roll =
+				gx + rng:NextNumber(-FOREST_JITTER, FOREST_JITTER),
+				gz + rng:NextNumber(-FOREST_JITTER, FOREST_JITTER),
+				rng:NextNumber()
 			local p = v2(x, z)
 			local near = math.huge
 			for _, r in ROADS do
@@ -1008,8 +1037,19 @@ local function bosque(map: Folder)
 		then
 			count += 1
 			local m = model(trees, "Arbol_" .. count)
-			cylinder(m, "Tronco", hit.Position - v3(0, 1, 0), 25, 2.5, C.Bark)
-			part(m, "Copa", CFrame.new(hit.Position + v3(0, 24, 0)), v3(10, 14, 10), C.Forest).CanCollide = false
+			local var = TREE_VARIANTS[rng:NextInteger(1, #TREE_VARIANTS)]
+			local sc, yaw = rng:NextNumber(TREE_SCALE_MIN, TREE_SCALE_MAX), rng:NextNumber(0, math.pi * 2)
+			cylinder(m, "Tronco", hit.Position - v3(0, 1, 0), var.trunk * sc, 2.5 * sc, C.Bark)
+			for i, c in var.crowns do
+				part(
+					m,
+					"Copa_" .. i,
+					CFrame.new(hit.Position + v3(0, c.y * sc, 0)) * CFrame.Angles(0, yaw, 0),
+					c.size * sc,
+					var.color
+				).CanCollide =
+					false
+			end
 			if count % 200 == 0 then
 				task.wait()
 			end
@@ -1191,6 +1231,41 @@ end
 -- MAIN
 --------------------------------------------------------------------------------------------------
 
+-- Borra el Baseplate de la plantilla y deja un unico SpawnLocation invisible sobre BaseSpawn (tras crear marcadores).
+local function removeBaseplate()
+	local bp = Workspace:FindFirstChild("Baseplate")
+	if bp then
+		bp:Destroy()
+	end
+end
+
+local function setupSpawn()
+	local marker = (Workspace:FindFirstChild("Markers") :: Instance):FindFirstChild("BaseSpawn") :: BasePart
+	local spawns: { SpawnLocation } = {}
+	for _, d in Workspace:GetDescendants() do
+		if d:IsA("SpawnLocation") then
+			table.insert(spawns, d)
+		end
+	end
+	local sp = table.remove(spawns, 1) or Instance.new("SpawnLocation")
+	for _, extra in spawns do
+		extra:Destroy()
+	end
+	for _, c in sp:GetChildren() do
+		if c:IsA("Decal") or c:IsA("Texture") then
+			c:Destroy()
+		end
+	end
+	sp.Name = "SpawnLocation"
+	sp.Anchored = true
+	sp.CanCollide = false
+	sp.Transparency = 1
+	sp.Neutral = true
+	sp.Size = marker.Size
+	sp.CFrame = marker.CFrame
+	sp.Parent = Workspace
+end
+
 local RUNNERS: { [string]: (Folder) -> () } = {
 	Terreno = terreno,
 	Caminos = caminos,
@@ -1205,6 +1280,7 @@ local RUNNERS: { [string]: (Folder) -> () } = {
 
 assert(SECTION == "All" or RUNNERS[SECTION] ~= nil, "SECTION invalida: " .. SECTION)
 local t0 = os.clock()
+removeBaseplate()
 if SECTION == "All" or SECTION == "Terreno" then
 	Terrain:Clear()
 	for _, n in { "Map", "Markers" } do
@@ -1221,6 +1297,9 @@ end
 for _, s in SECTIONS do
 	if SECTION == "All" or SECTION == s then
 		RUNNERS[s](mapFolder :: Folder)
+		if s == "Marcadores" then
+			setupSpawn()
+		end
 		print(string.format("MapBuilder: %s lista (%.1fs)", s, os.clock() - t0))
 		task.wait()
 	end
