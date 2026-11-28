@@ -9,6 +9,7 @@ local Service = {}
 export type Context = { [string]: unknown }
 
 local bridge: any
+local runtimeName = "Runtime"
 
 local function find(root: Instance, path: string): Instance?
 	local current: Instance? = root
@@ -20,6 +21,7 @@ end
 
 function Service.Init(context: Context)
 	bridge = ((context.Configs :: any).ObjectivesConfig).Bridge
+	runtimeName = ((context.Configs :: any).WorldConfig).RuntimeName
 end
 
 function Service.Start() end
@@ -67,6 +69,23 @@ end
 -- Cada run empieza con el puente roto.
 function Service.BeginRun(_runId: string)
 	Service.setBridgeBuilt(false)
+end
+
+-- Workspace/Runtime/<name>: carpeta de clones de la run (se crea si falta, nunca se borra Map).
+function Service.RuntimeFolder(name: string): Folder
+	local runtime = Workspace:FindFirstChild(runtimeName)
+	if not runtime then
+		runtime = Instance.new("Folder")
+		runtime.Name = runtimeName
+		runtime.Parent = Workspace
+	end
+	local folder = runtime:FindFirstChild(name)
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = name
+		folder.Parent = runtime
+	end
+	return folder :: Folder
 end
 
 function Service.Resolve(_entityId: string): Instance?

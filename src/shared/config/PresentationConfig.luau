@@ -9,6 +9,22 @@ return {
 		Flashlight = Enum.KeyCode.F,
 		DebugCyclePhase = Enum.KeyCode.F6,
 		DebugCycleNight = Enum.KeyCode.F7,
+		Hit = Enum.UserInputType.MouseButton1,
+		Interact = Enum.KeyCode.E,
+		Inventory = Enum.KeyCode.Tab,
+		Craft = Enum.KeyCode.G,
+		-- Barra rapida: la tecla N activa el slot N del inventario (1..9).
+		Hotbar = {
+			Enum.KeyCode.One,
+			Enum.KeyCode.Two,
+			Enum.KeyCode.Three,
+			Enum.KeyCode.Four,
+			Enum.KeyCode.Five,
+			Enum.KeyCode.Six,
+			Enum.KeyCode.Seven,
+			Enum.KeyCode.Eight,
+			Enum.KeyCode.Nine,
+		},
 	},
 	AudioIds = {},
 	Colors = {
@@ -18,6 +34,17 @@ return {
 		Stamina = Color3.fromRGB(215, 185, 70),
 		Battery = Color3.fromRGB(90, 170, 220),
 		BatteryLow = Color3.fromRGB(220, 110, 60),
+		Hunger = Color3.fromRGB(150, 110, 60),
+		Panel = Color3.fromRGB(18, 18, 20),
+		Slot = Color3.fromRGB(38, 38, 42),
+		SlotEquipped = Color3.fromRGB(215, 185, 70),
+		TextDim = Color3.fromRGB(150, 150, 155),
+		Good = Color3.fromRGB(120, 200, 120),
+		Bad = Color3.fromRGB(220, 100, 90),
+		Button = Color3.fromRGB(70, 90, 70),
+		ButtonDisabled = Color3.fromRGB(45, 45, 48),
+		Progress = Color3.fromRGB(230, 230, 230),
+		ItemUsedFlash = Color3.fromRGB(160, 230, 160),
 	},
 	ReducedMotionBobAmplitudeStuds = 0,
 
@@ -60,6 +87,127 @@ return {
 		BarHeight = 14,
 		BarGap = 6,
 		Margin = 16,
+		PromptOffsetY = 60,
+		ProgressWidth = 220,
+		ProgressHeight = 10,
+		MessageSeconds = 2,
+		MessageOffsetY = 90,
+		CrosshairSize = 4,
+		CrosshairPulseSeconds = 0.12,
+		FlashSeconds = 0.35,
+		FlashTransparency = 0.7,
+		-- Etiqueta de la barra de progreso por accion (UseItem anade el nombre del item).
+		ActionLabels = {
+			SearchContainer = "Buscando",
+			PickupLoot = "Recogiendo",
+			LootBackpack = "Recogiendo",
+			UseItem = "Usando",
+		},
+		DefaultActionLabel = "Trabajando",
+	},
+
+	-- Solicitudes y ayudas de interaccion del cliente. La autoridad es siempre el servidor.
+	Interaction = {
+		HitRangeStuds = 12,
+		InteractRangeStuds = 8,
+		-- Alcance del rayo de apuntado al buscar contenedor (el rango real se mide desde el personaje).
+		AimRayStuds = 14,
+		-- Cooldown visual local si no hay herramienta equipada (la autoridad es el servidor).
+		DefaultHitCooldownSeconds = 1.2,
+		PromptRefreshSeconds = 0.1,
+		EquipGroupSeconds = 0.1,
+		-- Al soltar la tecla de interaccion solo se cancela si queda mas que esto del hold.
+		ReleaseCancelMinRemainingSeconds = 0.3,
+		-- Un snapshot sin interaccion no borra una recien iniciada antes de este margen.
+		SnapshotClearGraceSeconds = 1,
+		-- Acciones que se mantienen con la tecla de interaccion: soltarla las cancela.
+		HoldKeyActions = { SearchContainer = true, PickupLoot = true, LootBackpack = true },
+		SearchPrompt = "%s Buscar",
+		PickupPrompt = "%s Recoger %s x%d",
+	},
+
+	-- Iconos greybox por IconKey de ItemsConfig: color y letras. Sin IconKey conocido se usa el color por Kind.
+	Icons = {
+		Madera = { Color = Color3.fromRGB(139, 94, 52), Letters = "Ma" },
+		Piedra = { Color = Color3.fromRGB(120, 124, 130), Letters = "Pi" },
+		Chatarra = { Color = Color3.fromRGB(150, 110, 90), Letters = "Ch" },
+		Pila = { Color = Color3.fromRGB(90, 170, 220), Letters = "Pl" },
+		Venda = { Color = Color3.fromRGB(225, 225, 215), Letters = "Ve" },
+		Botiquin = { Color = Color3.fromRGB(200, 70, 70), Letters = "Bo" },
+		Lata = { Color = Color3.fromRGB(190, 160, 80), Letters = "La" },
+		Baya = { Color = Color3.fromRGB(150, 70, 160), Letters = "Ba" },
+		Hacha = { Color = Color3.fromRGB(170, 120, 70), Letters = "Hc" },
+		Pico = { Color = Color3.fromRGB(110, 140, 170), Letters = "Pc" },
+	},
+	IconKindColors = {
+		Material = Color3.fromRGB(110, 110, 110),
+		Consumable = Color3.fromRGB(110, 150, 110),
+		Tool = Color3.fromRGB(150, 130, 100),
+	},
+	IconDefaultColor = Color3.fromRGB(100, 100, 100),
+
+	Inventory = {
+		Columns = 4,
+		SlotSize = 84,
+		SlotGap = 8,
+		Padding = 16,
+		Title = "INVENTARIO",
+		EquippedLabel = "EQUIPADO",
+	},
+
+	Craft = {
+		Width = 440,
+		RowHeight = 76,
+		RowGap = 8,
+		Padding = 16,
+		Title = "CRAFTEO",
+		-- Cantidades de los botones de crafteo (CraftItem count, el servidor limita a MaxBatch).
+		Batches = { 1, 5 },
+	},
+
+	Feedback = {
+		ShakeSeconds = 0.18,
+		ShakeStuds = 0.25,
+		-- Minimo entre efectos locales sobre el mismo nodo (golpe confirmado + cue duplicado).
+		NodeFxDebounceSeconds = 0.15,
+		ParticleLifetimeSeconds = 0.6,
+		ParticleSpeed = 14,
+		ParticleSize = 0.35,
+		ParticleGravity = 25,
+		HitParticles = 8,
+		DepletedParticles = 24,
+		ContainerParticles = 14,
+		DefaultParticleColor = Color3.fromRGB(200, 200, 200),
+		NodeColors = {
+			Arbol = Color3.fromRGB(139, 94, 52),
+			Roca = Color3.fromRGB(150, 150, 155),
+			Arbusto = Color3.fromRGB(80, 150, 70),
+		},
+		ContainerColor = Color3.fromRGB(215, 185, 70),
+	},
+
+	-- Mensajes cortos por ResultCode de error. Los codigos sin entrada (Cooldown) no muestran nada.
+	ResultMessages = {
+		InvalidPayload = "Accion invalida",
+		RateLimited = "Demasiado rapido",
+		StaleRun = "Partida desactualizada",
+		NotReady = "No disponible",
+		WrongPhase = "No se puede ahora",
+		NotAlive = "No puedes hacerlo",
+		HandsBusy = "Manos ocupadas",
+		Busy = "Ocupado",
+		NotFound = "No encontrado",
+		OutOfRange = "Muy lejos",
+		Blocked = "Algo lo bloquea",
+		WrongTool = "Herramienta incorrecta",
+		InsufficientItems = "Faltan materiales",
+		InventoryFull = "Inventario lleno",
+		Occupied = "Ocupado",
+		LimitReached = "Limite alcanzado",
+		InvalidState = "No se puede ahora",
+		Cancelled = "Interrumpido",
+		Forbidden = "No permitido",
+		InternalError = "Error",
 	},
 
 	Lighting = {

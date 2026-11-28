@@ -24,6 +24,7 @@ return {
 	SnapshotMaxBytes = 32768,
 	SnapshotMaxPerSecond = 5,
 	ContainerViewRangeStuds = 30,
+	FeedbackRangeStuds = 80,
 	MaxVisibleContainers = 24,
 	MaxContainerStacks = 12,
 	PendingRequestTimeoutSeconds = 3,

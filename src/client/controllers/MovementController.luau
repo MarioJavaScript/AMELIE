@@ -9,6 +9,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared:WaitForChild("types"))
 local PresentationConfig = require(Shared:WaitForChild("config"):WaitForChild("PresentationConfig"))
 
+local ClientTypes = require(script.Parent.Parent:WaitForChild("ClientTypes"))
+
 local Controller = {}
 
 export type Context = { [string]: unknown }
@@ -16,7 +18,7 @@ export type Context = { [string]: unknown }
 type Mode = "Walk" | "Sprint" | "Crouch"
 
 local remotes: { [string]: RemoteEvent } = {}
-local controllers: { [string]: any } = {}
+local controllers = {} :: ClientTypes.Controllers
 local connections: { RBXScriptConnection } = {}
 local unsubscribers: { () -> () } = {}
 
@@ -112,7 +114,7 @@ end
 
 function Controller.Init(context: Context)
 	remotes = context.Remotes :: { [string]: RemoteEvent }
-	controllers = context.Controllers :: { [string]: any }
+	controllers = context.Controllers :: ClientTypes.Controllers
 end
 
 function Controller.Start()

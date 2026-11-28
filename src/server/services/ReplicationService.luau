@@ -16,20 +16,28 @@ local lastError: { [Player]: number } = {}
 local revisions: { [Player]: number } = {}
 local session: any
 local world: any
+local inventory: any
+local resources: any
+local interaction: any
 
 local function currentRunId(): string
 	return session.GetRunId() or ""
 end
 
-local function result(player: Player, payload: any, ok: boolean, code: string)
-	if not ok then
+-- Envia ActionResult (los errores se limitan a 2/s) y devuelve el paquete para el cache de deduplicacion.
+local function send(player: Player, packet: any)
+	if not packet.ok then
 		local now = os.clock()
 		if now - (lastError[player] or 0) < 0.5 then
 			return
 		end
 		lastError[player] = now
 	end
-	remotes.ActionResult:FireClient(player, {
+	remotes.ActionResult:FireClient(player, packet)
+end
+
+local function result(player: Player, payload: any, ok: boolean, code: string, entityId: string?): any
+	local packet = {
 		runId = currentRunId(),
 		requestId = if typeof(payload) == "table" and typeof(payload.requestId) == "string"
 			then payload.requestId
@@ -37,7 +45,10 @@ local function result(player: Player, payload: any, ok: boolean, code: string)
 		ok = ok,
 		code = code,
 		revision = revisions[player] or 0,
-	})
+		entityId = entityId,
+	}
+	send(player, packet)
+	return packet
 end
 
 function Service.Init(context: { [string]: unknown })
@@ -48,11 +59,15 @@ function Service.Init(context: { [string]: unknown })
 	objectivesConfig = (context.Configs :: any).ObjectivesConfig
 	session = (context.Services :: any).SessionService
 	world = (context.Services :: any).WorldService
+	inventory = (context.Services :: any).InventoryService
+	resources = (context.Services :: any).ResourceService
+	interaction = (context.Services :: any).InteractionService
 	Guard.Init(network)
 end
 
 function Service.PublishSnapshot(player: Player)
 	local own = players.GetState(player)
+	local userId = player.UserId
 	local views = {}
 	for _, other in Players:GetPlayers() do
 		local state = players.GetState(other)
@@ -91,9 +106,12 @@ function Service.PublishSnapshot(player: Player)
 			maxStamina = playerConfig.Stamina.Max,
 			battery = if own then own.battery else 0,
 			maxBattery = playerConfig.Flashlight.MaxBattery,
+			hunger = if own then own.hunger else 0,
+			maxHunger = playerConfig.Hunger.Max,
 			moveMode = if own then own.mode else "Walk",
-			equippedSlot = 0,
-			inventory = {},
+			equippedSlot = inventory.GetEquippedSlot(userId),
+			inventory = inventory.GetSnapshot(userId),
+			interaction = interaction.GetActive(player),
 			soloChanceAvailable = false,
 		},
 		objectives = {
@@ -105,82 +123,156 @@ function Service.PublishSnapshot(player: Player)
 			requiredSeconds = objectivesConfig.TransmissionSeconds,
 		},
 		structures = {},
-		containers = {},
+		containers = resources.GetContainerViews(player),
 	}
 	remotes.StateSnapshot:FireClient(player, snapshot)
 	lastSnapshot[player] = os.clock()
 end
 
-local function bind(name: string, handler: (Player, any) -> ())
+-- Remotes que cambian el estado propio: tras un exito se publica un snapshot antes del ActionResult.
+local function bind(name: string, handler: (Player, any) -> (boolean, string, string?))
 	table.insert(
 		connections,
 		remotes[name].OnServerEvent:Connect(function(player: Player, ...)
 			local ok, code, payload = Guard.Check(player, name, ...)
 			if not ok then
-				result(player, payload, false, code)
+				send(player, { ok = false, code = code, runId = currentRunId(), requestId = "", revision = 0 })
 				return
 			end
-			handler(player, payload)
+			local status, previous = Guard.Recall(player, name, payload)
+			if status == "Replay" then
+				send(player, previous)
+				return
+			elseif status == "Conflict" then
+				result(player, payload, false, "InvalidPayload")
+				return
+			end
+			local success, outcome, entityId = handler(player, payload)
+			if success then
+				Service.PublishSnapshot(player)
+			end
+			Guard.Remember(player, name, payload, result(player, payload, success, outcome, entityId))
 		end)
 	)
 end
 
+local function stale(payload: any): boolean
+	return payload.runId ~= currentRunId() or payload.runId == ""
+end
+
+-- G: run vigente y Alive; con `free` ademas sin interaccion activa y con manos libres.
+local function gate(player: Player, payload: any, free: boolean): string
+	if stale(payload) then
+		return "StaleRun"
+	end
+	local state = players.GetState(player)
+	if not state or state.life ~= "Alive" then
+		return "NotAlive"
+	end
+	if free then
+		if interaction.HasActive(player) then
+			return "Busy"
+		end
+		if not players.HandsFree(player) then
+			return "HandsBusy"
+		end
+	end
+	return "Ok"
+end
+
+-- Envuelve un handler que devuelve solo un ResultCode ("Ok" o "Accepted" cuentan como exito).
+local function coded(
+	free: boolean,
+	action: (Player, any) -> (string, string?)
+): (Player, any) -> (boolean, string, string?)
+	return function(player, payload)
+		local code = gate(player, payload, free)
+		local entityId: string? = nil
+		if code == "Ok" then
+			code, entityId = action(player, payload)
+		end
+		return code == "Ok" or code == "Accepted", code, entityId
+	end
+end
+
 function Service.BindRemotes()
-	bind("RequestSnapshot", function(player)
-		Service.PublishSnapshot(player)
-	end)
-	bind("SetMovementMode", function(player, payload)
-		if payload.runId ~= currentRunId() or payload.runId == "" then
-			result(player, payload, false, "StaleRun")
-			return
+	table.insert(
+		connections,
+		remotes.RequestSnapshot.OnServerEvent:Connect(function(player: Player, ...)
+			if Guard.Check(player, "RequestSnapshot", ...) then
+				Service.PublishSnapshot(player)
+			end
+		end)
+	)
+	table.insert(
+		connections,
+		remotes.SetFlashlightAim.OnServerEvent:Connect(function(player: Player, ...)
+			Guard.Check(player, "SetFlashlightAim", ...)
+		end)
+	)
+	bind(
+		"SetMovementMode",
+		coded(false, function(player, payload)
+			if players.SetMovementMode(player, payload.mode) then
+				return "Ok", nil
+			end
+			return "InvalidState", nil
+		end)
+	)
+	bind(
+		"SetFlashlight",
+		coded(false, function(player, payload)
+			return if players.SetFlashlight(player, payload.enabled) then "Ok" else "InvalidState", nil
+		end)
+	)
+	bind(
+		"EquipTool",
+		coded(true, function(player, payload)
+			return inventory.Equip(player.UserId, payload.slot), nil
+		end)
+	)
+	bind(
+		"HitResource",
+		coded(true, function(player, payload)
+			return resources.Hit(player, payload.targetId), payload.targetId
+		end)
+	)
+	bind(
+		"CraftItem",
+		coded(true, function(player, payload)
+			return inventory.Craft(player.UserId, payload.recipeId, payload.count), nil
+		end)
+	)
+	bind(
+		"BeginInteraction",
+		coded(false, function(player, payload)
+			return interaction.Begin(player, payload.requestId, payload.action, payload.targetId)
+		end)
+	)
+	bind("CancelInteraction", function(player, payload)
+		local state = players.GetState(player)
+		if stale(payload) then
+			return false, "StaleRun", nil
+		elseif not state or state.life == "Spectating" then
+			return false, "NotAlive", nil
 		end
-		if players.SetMovementMode(player, payload.mode) then
-			result(player, payload, true, "Ok")
-		else
-			local state = players.GetState(player)
-			result(player, payload, false, if state == nil or state.life ~= "Alive" then "NotAlive" else "InvalidState")
-		end
-		Service.PublishSnapshot(player)
-	end)
-	bind("SetFlashlight", function(player, payload)
-		if payload.runId ~= currentRunId() or payload.runId == "" then
-			result(player, payload, false, "StaleRun")
-			return
-		end
-		result(player, payload, players.SetFlashlight(player, payload.enabled), "Ok")
-		Service.PublishSnapshot(player)
+		local code = interaction.Cancel(player, payload.interactionId)
+		return code == "Ok", code, nil
 	end)
 	-- Debug del puente: solo Studio, la decision y el cambio los hace el servidor.
-	bind("DebugBridge", function(player, payload)
+	bind("DebugBridge", function(_player, payload)
 		if not RunService:IsStudio() then
-			result(player, payload, false, "Forbidden")
-			return
+			return false, "Forbidden", nil
 		end
-		if payload.runId ~= currentRunId() or payload.runId == "" then
-			result(player, payload, false, "StaleRun")
-			return
+		if stale(payload) then
+			return false, "StaleRun", nil
 		end
 		local ok = world.setBridgeBuilt(payload.enabled)
-		result(player, payload, ok, if ok then "Ok" else "InvalidState")
+		return ok, if ok then "Ok" else "InvalidState", nil
 	end)
-	for _, name in
-		{
-			"SetReady",
-			"EquipTool",
-			"HitResource",
-			"CraftItem",
-			"PlaceStructure",
-			"DropObjective",
-			"BeginInteraction",
-			"CancelInteraction",
-			"Shout",
-			"SetFlashlightAim",
-		}
-	do
-		bind(name, function(player, payload)
-			if name ~= "SetFlashlightAim" then
-				result(player, payload, false, "WrongPhase")
-			end
+	for _, name in { "SetReady", "PlaceStructure", "DropObjective", "Shout" } do
+		bind(name, function()
+			return false, "WrongPhase", nil
 		end)
 	end
 	for _, name in { "StateSnapshot", "ActionResult", "InteractionState", "Feedback" } do
@@ -193,8 +285,25 @@ function Service.BindRemotes()
 	end
 end
 
+-- Feedback cosmetico a los jugadores a <= FeedbackRangeStuds de `position` (o a `audience`).
+function Service.EmitFeedback(cueId: string, sourceId: string, position: Vector3, audience: { Player }?)
+	local runId = currentRunId()
+	if runId == "" then
+		return
+	end
+	local packet =
+		{ runId = runId, cueId = cueId, sourceId = sourceId, position = position, at = Workspace:GetServerTimeNow() }
+	for _, player in audience or Players:GetPlayers() do
+		local at = players.GetValidatedPosition(player)
+		if audience or (at and (at - position).Magnitude <= network.FeedbackRangeStuds) then
+			remotes.Feedback:FireClient(player, packet)
+		end
+	end
+end
+
 function Service.Start()
 	Service.BindRemotes()
+	interaction.OnChange(Service.PublishSnapshot)
 	table.insert(
 		connections,
 		RunService.Heartbeat:Connect(function()

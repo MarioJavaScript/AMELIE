@@ -13,11 +13,20 @@ local Config = Shared:WaitForChild("config")
 local PresentationConfig = require(Config:WaitForChild("PresentationConfig"))
 local DebugCommands = require(script.Parent.Parent:WaitForChild("DebugCommands"))
 
+local ClientTypes = require(script.Parent.Parent:WaitForChild("ClientTypes"))
+
 local Controller = {}
 
 export type Context = { [string]: unknown }
 
-type Values = { [string]: { [string]: any } }
+type Group = { [string]: number | Color3 }
+type Values = { [string]: Group }
+type Preset = { [string]: number | Group }
+
+-- Los presets son datos con propiedades de Lighting/Atmosphere/ColorCorrection por nombre: se estrechan una sola vez.
+local Presets = (PresentationConfig.LightingPresets :: unknown) :: { [string]: Preset }
+local Overrides = (PresentationConfig.NightOverrides :: unknown) :: { Values }
+local PhasePreset = PresentationConfig.Lighting.PhasePreset :: { [string]: string }
 
 local CLOCK_HOURS = 24
 local DEBUG_PHASES: { Types.Phase } = { "Day", "Dusk", "Night", "Dawn" }
@@ -28,7 +37,7 @@ local PHASE_ALIASES: { [string]: Types.Phase } = {
 	amanecer = "Dawn",
 }
 
-local controllers: { [string]: any } = {}
+local controllers = {} :: ClientTypes.Controllers
 local connections: { RBXScriptConnection } = {}
 local unsubscribers: { () -> () } = {}
 
@@ -74,10 +83,14 @@ local function warnTechnology()
 	end
 	technologyWarned = true
 	local required = PresentationConfig.Lighting.RequiredTechnology
-	if Lighting.Technology.Name ~= required then
+	-- Leer Technology falla en el cliente de Studio (falta capacidad RobloxScript): no debe abortar el arranque.
+	local readable, technology = pcall(function()
+		return Lighting.Technology.Name
+	end)
+	if readable and technology ~= required then
 		warn(
 			"EnvironmentController: Lighting.Technology es "
-				.. Lighting.Technology.Name
+				.. technology
 				.. " y debe ser "
 				.. required
 				.. ". Cambialo en Studio (Lighting > Technology); no se puede fijar por script."
@@ -87,16 +100,14 @@ end
 
 -- Preset base mezclado con el override de la noche (solo la fase Night usa NightOverrides).
 local function resolve(presetName: string, night: number): Values
-	local presets = PresentationConfig.LightingPresets :: any
 	local result: Values = {}
-	for group, props in presets[presetName] do
+	for group, props in Presets[presetName] do
 		if typeof(props) == "table" then
 			result[group] = table.clone(props)
 		end
 	end
 	if presetName == "Night" then
-		local overrides = PresentationConfig.NightOverrides :: any
-		local override = overrides[math.clamp(night, 1, #overrides)]
+		local override = Overrides[math.clamp(night, 1, #Overrides)]
 		for group, props in override do
 			local target = result[group]
 			if target == nil then
@@ -111,40 +122,45 @@ local function resolve(presetName: string, night: number): Values
 	return result
 end
 
+-- Acceso por nombre de propiedad: la API de Roblox no tipa las propiedades dinamicas.
+local function dynamic(group: string): { [string]: unknown }
+	return (instances[group] :: unknown) :: { [string]: unknown }
+end
+
 local function readCurrent(target: Values): Values
 	local snapshot: Values = {}
 	for group, props in target do
-		local instance = instances[group] :: any
-		local values: { [string]: any } = {}
+		local instance = dynamic(group)
+		local values: Group = {}
 		for prop in props do
-			values[prop] = instance[prop]
+			values[prop] = instance[prop] :: number | Color3
 		end
 		snapshot[group] = values
 	end
 	return snapshot
 end
 
-local function lerpValue(prop: string, from: any, to: any, alpha: number): any
-	if prop == "ClockTime" then
-		-- La hora avanza hacia adelante (atardecer 18.3 -> noche 0 pasa por 24), por el camino corto.
-		local delta = (to - from) % CLOCK_HOURS
-		if delta > CLOCK_HOURS / 2 then
-			delta -= CLOCK_HOURS
+local function lerpValue(prop: string, from: number | Color3, to: number | Color3, alpha: number): number | Color3
+	if typeof(from) == "number" and typeof(to) == "number" then
+		if prop == "ClockTime" then
+			-- La hora avanza hacia adelante (atardecer 18.3 -> noche 0 pasa por 24), por el camino corto.
+			local delta = (to - from) % CLOCK_HOURS
+			if delta > CLOCK_HOURS / 2 then
+				delta -= CLOCK_HOURS
+			end
+			return (from + delta * alpha) % CLOCK_HOURS
 		end
-		return (from + delta * alpha) % CLOCK_HOURS
-	end
-	if typeof(from) == "number" then
 		return from + (to - from) * alpha
 	end
-	if typeof(from) == "Color3" then
-		return (from :: Color3):Lerp(to :: Color3, alpha)
+	if typeof(from) == "Color3" and typeof(to) == "Color3" then
+		return from:Lerp(to, alpha)
 	end
 	return to
 end
 
 local function apply(from: Values, to: Values, alpha: number)
 	for group, props in to do
-		local instance = instances[group] :: any
+		local instance = dynamic(group)
 		local source = from[group]
 		for prop, target in props do
 			local start = if source ~= nil and source[prop] ~= nil then source[prop] else target
@@ -162,11 +178,11 @@ local function setTarget(presetName: string, night: number, instant: boolean)
 	ensureInstances()
 	warnTechnology()
 
-	local presets = PresentationConfig.LightingPresets :: any
 	toValues = resolve(presetName, night)
 	fromValues = readCurrent(toValues)
 	elapsed = 0
-	duration = if instant then 0 else presets[presetName].TransitionSeconds
+	local seconds = Presets[presetName].TransitionSeconds
+	duration = if instant or typeof(seconds) ~= "number" then 0 else seconds
 	if duration <= 0 then
 		apply(fromValues, toValues, 1)
 		transitioning = false
@@ -184,8 +200,7 @@ end
 
 local function refresh(instant: boolean)
 	local phase, night = currentPhase()
-	local mapping = PresentationConfig.Lighting.PhasePreset :: any
-	setTarget(mapping[phase] or "Day", night, instant)
+	setTarget(PhasePreset[phase] or "Day", night, instant)
 end
 
 local function onSnapshot(snapshot: Types.Snapshot)
@@ -214,7 +229,7 @@ function Controller.SetDebugPhase(phase: Types.Phase?, night: number?)
 	end
 	debugPhase = phase
 	if night ~= nil then
-		debugNight = math.clamp(math.floor(night), 1, #(PresentationConfig.NightOverrides :: any))
+		debugNight = math.clamp(math.floor(night), 1, #Overrides)
 	end
 	local phaseName, nightNumber = currentPhase()
 	print(
@@ -234,12 +249,12 @@ local function cyclePhase()
 end
 
 local function cycleNight()
-	local count = #(PresentationConfig.NightOverrides :: any)
+	local count = #Overrides
 	Controller.SetDebugPhase(debugPhase or "Night", debugNight % count + 1)
 end
 
 function Controller.Init(context: Context)
-	controllers = context.Controllers :: { [string]: any }
+	controllers = context.Controllers :: ClientTypes.Controllers
 end
 
 function Controller.Start()

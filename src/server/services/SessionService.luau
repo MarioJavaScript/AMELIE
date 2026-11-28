@@ -14,20 +14,33 @@ export type Context = { [string]: unknown }
 local connections: { RBXScriptConnection } = {}
 local currentRunId: string? = nil
 local world: any
+local services: any
 
 function Service.Init(context: Context)
-	world = (context.Services :: any).WorldService
+	services = context.Services
+	world = services.WorldService
 end
 
 -- Crea una run con un runId nuevo (ASCII alfanumerico y guion, <= 64 bytes: ver remotes.md) y lo devuelve.
 function Service.BeginRun(): string
+	-- Contenido invalido: la run no arranca (el error del servicio explica el path) y no se toca ningun estado.
+	services.ResourceService.Validate()
 	local runId = "dev_" .. HttpService:GenerateGUID(false)
 	currentRunId = runId
+	services.InteractionService.CancelAll("Cancelled")
 	world.BeginRun(runId)
+	services.InventoryService.ResetForRun()
+	services.PlayerService.BeginRun(runId)
+	services.ResourceService.BeginRun(runId)
+	for _, player in Players:GetPlayers() do
+		services.InventoryService.GiveInitialKit(player.UserId)
+	end
 	return runId
 end
 
 function Service.EndRun(_outcome: string?)
+	services.InteractionService.CancelAll("Cancelled")
+	services.PlayerService.EndRun()
 	currentRunId = nil
 end
 
@@ -35,17 +48,18 @@ function Service.GetRunId(): string?
 	return currentRunId
 end
 
-local function ensureDevRun()
+local function onJoin(player: Player)
 	if currentRunId == nil then
 		Service.BeginRun()
 	end
+	services.InventoryService.GiveInitialKit(player.UserId)
 end
 
 function Service.Start()
 	if not RunService:IsStudio() then
 		return
 	end
-	table.insert(connections, Players.PlayerAdded:Connect(ensureDevRun))
+	table.insert(connections, Players.PlayerAdded:Connect(onJoin))
 	table.insert(
 		connections,
 		Players.PlayerRemoving:Connect(function()
@@ -55,8 +69,8 @@ function Service.Start()
 			end
 		end)
 	)
-	if #Players:GetPlayers() > 0 then
-		ensureDevRun()
+	for _, player in Players:GetPlayers() do
+		onJoin(player)
 	end
 end
 

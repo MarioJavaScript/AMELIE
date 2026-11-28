@@ -6,6 +6,7 @@ return {
 		WaterStep = 25,
 		SprintStep = 35,
 		ResourceHit = 50,
+		Forage = 15,
 		BuildRepair = 45,
 		MetalOpen = 30,
 		Revive = 30,

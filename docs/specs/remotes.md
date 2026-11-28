@@ -62,6 +62,7 @@ En Result y con resultado terminal fijado, todo salvo `RequestSnapshot` se recha
 | `BeginInteraction` | RemoteEvent | C→S | `Req & {action: InteractionAction, targetId: string}` | G con excepciones de subtabla; rango ≤8, LOS cuando hay target; recursos/materiales propios del subcaso; una reserva por jugador y clave de reserva exclusiva. Servidor mide hold. | 3/3 |
 | `CancelInteraction` | RemoteEvent | C→S | `Req & {interactionId: string}` | Solo una interacción propia; permite Downed o falta de manos libres para cancelar. No efectos de inventario. No exige rango: cancelar desde lejos es válido. | 4/4 |
 | `Shout` | RemoteEvent | C→S | `Req` | Solo Downed participante; no Alive ni manos libres; cooldown 5 s StimuliConfig. Emite desde posición validada; sin blanco/materiales. | 0.2/1 |
+| `DebugBridge` | RemoteEvent | C→S | `Req & {enabled: boolean}` | **Solo Studio:** el servidor rechaza con `Forbidden` si `RunService:IsStudio()` es falso. runId actual. Llama a `WorldService.setBridgeBuilt`. Sin efecto en servidores publicados. | 1/2 |
 
 ```luau
 type Placement =
@@ -69,12 +70,12 @@ type Placement =
     | {pieceId: "Pared" | "MarcoPuerta", parentId: string, socketId: "EdgeN" | "EdgeE" | "EdgeS" | "EdgeW"}
     | {pieceId: "Fogata"}
 type InteractionAction = "PickupObjective" | "InstallObjective" | "StartTransmission"
-    | "ResumeTransmission" | "RevivePlayer" | "UseBandage" | "ReplaceBattery"
+    | "ResumeTransmission" | "RevivePlayer" | "UseItem"
     | "RepairStructure" | "FuelCampfire" | "IgniteCampfire"
     | "SearchContainer" | "PickupLoot" | "LootBackpack" | "OpenDoor" | "CloseDoor"
 ```
 
-QuarterTurns entero 0..3. TargetIds son IDs opacos emitidos por servidor/atributos de entidades registradas; resolver solo en registry actual, nunca como path para buscar instancias arbitrarias. Para acciones personales targetId es el ID del propio jugador del snapshot; rechazar otro jugador. Revive usa ID del jugador objetivo, no nombre visible ni UserId recibido como autoridad.
+QuarterTurns entero 0..3. TargetIds son IDs opacos emitidos por servidor/atributos de entidades registradas; resolver solo en registry actual, nunca como path para buscar instancias arbitrarias. Para acciones personales targetId es el ID del propio jugador del snapshot; rechazar otro jugador. Excepción F2: en `UseItem` el targetId es el `ItemId` a usar (validado contra `ItemsConfig` y el inventario propio). Revive usa ID del jugador objetivo, no nombre visible ni UserId recibido como autoridad.
 
 `ExtinguishCampfire` (apagar la fogata por un jugador) se retiró del MVP en F0-4 por ser un vector de griefing que puede provocar una aniquilación; el GDD no lo pide. **[pendiente de aprobar por Mario]** Ver hallazgo M6.
 
@@ -91,8 +92,7 @@ Cada acción toma una **clave de reserva** exclusiva; dos acciones con la misma 
 | StartTransmission | 3 s | `radio:control` | Radio Ready, 4 piezas, Night; noche válida hasta fin | Ninguno |
 | ResumeTransmission | 3 s | `radio:control` | Radio Paused y Night; nuevo golpe interrumpe | Ninguno |
 | RevivePlayer | 4 s | `revive:<víctima>` | Compañero Downed, no uno mismo; sigue caído y ambos conectados. Mientras dura, el caído no puede arrastrarse (velocidad 0 en servidor). | Ninguno |
-| UseBandage | 2 s | `self:<jugador>` | Uno mismo Alive con HP faltante; no chequeo LOS a uno mismo | 1 Venda |
-| ReplaceBattery | 2 s | `self:<jugador>` | Uno mismo, batería <100; manos libres, no LOS propio | 1 Pila |
+| UseItem | `ItemsConfig.Items[id].Use.HoldSeconds` | `self:<jugador>` | targetId = ItemId propio con `Use`; Alive, manos libres; el efecto no se desperdicia entero (HP/hambre/batería bajo el máximo). Sin LOS ni rango. Daño de enemigo cancela solo si `Use.CancelOnDamage` | 1 del ítem. Sustituye a `UseBandage` y `ReplaceBattery` (F2) |
 | RepairStructure | 2 s | `structure:<id>` | Estructura registrada dañada, no destruida; fogata rota reparable | Tabla de StructuresConfig |
 | FuelCampfire | 1 s | `structure:<id>` | Fogata, espacio para 30 s base completo; no acepta count cliente | 1 Madera |
 | IgniteCampfire | 5 s | `structure:<id>` | Fogata apagada, HP>0, combustible>0 | Ninguno adicional |
@@ -104,7 +104,7 @@ Cada acción toma una **clave de reserva** exclusiva; dos acciones con la misma 
 
 Con claves por hueco, dos portadores pueden instalar piezas distintas a la vez; iniciar/reactivar la transmisión no compite con instalar porque exige las 4 piezas ya instaladas.
 
-Holds comunes/rango/chequeo en `InteractionConfig`, holds de piezas/radio en ObjectivesConfig, reparación/fogata en StructuresConfig, personales/revive en PlayerConfig. No duplicar su valor en NetworkConfig. **Decisión de spec:** acción mantenida cancela al recibir daño el actor, moverse >1.5 studs desde inicio, salir de rango/LOS, cambiar fase a una incompatible, caer/morir/desconectarse, cambiar run, perder target o perder reserva. Revalidación 0.1 s y al finalizar. Giro de cámara no cancela si LOS sigue válido. Abrir/cerrar puertas se valida de nuevo al commit.
+Holds comunes/rango/chequeo en `InteractionConfig`, holds de piezas/radio en ObjectivesConfig, reparación/fogata en StructuresConfig, personales/revive en PlayerConfig. No duplicar su valor en NetworkConfig. **Decisión de spec:** acción mantenida cancela al recibir daño el actor (excepto `UseItem` con `CancelOnDamage = false`; el daño por hambre nunca cancela), moverse >1.5 studs desde inicio, salir de rango/LOS, cambiar fase a una incompatible, caer/morir/desconectarse, cambiar run, perder target o perder reserva. Revalidación 0.1 s y al finalizar. Giro de cámara no cancela si LOS sigue válido. Abrir/cerrar puertas se valida de nuevo al commit.
 
 El servidor asigna `interactionId`, `startedAt`, `endsAt`, avisa y programa finalización automática. Cliente no puede enviar «completado». Soltar botón emite Cancel; si lo omite, mantener posición/estado hasta cumplir hold es suficiente: no se pretende probar físicamente que la tecla siguió pulsada. Al completar se verifican materiales/capacidad y se consumen junto al efecto. Cancelar no consume; el ruido previo no se revierte. Un finalizador tardío de interacción cancelada no ejecuta nada.
 
@@ -136,7 +136,7 @@ Sin handlers de mutación en estos nombres. **F0-4:** el servidor conecta en cad
 
 RequestSnapshot devuelve snapshot; las demás solicitudes salvo SetFlashlightAim devuelven ActionResult. Aim válido no requiere ACK individual; estado se reconcilia en snapshot. Begin aceptado devuelve ok/code Accepted (reserva, no resultado final) y Started; Completed/Cancelled entrega resultado terminal en InteractionState ligado al requestId original. `ActionResult.revision` ayuda a esperar el siguiente snapshot, no supone que ya llegó. No usar orden relativo entre Remotes para aplicar transacciones en cliente. **F0-4:** como los errores se limitan a 2/s, el cliente no puede depender de recibir siempre un `ActionResult` de rechazo: toda solicitud pendiente en UI caduca a los 3 s (`NetworkConfig.PendingRequestTimeoutSeconds`) y se reconcilia con el siguiente snapshot.
 
-`ResultCode` es unión cerrada: `"Ok" | "Accepted" | "InvalidPayload" | "RateLimited" | "StaleRun" | "NotReady" | "WrongPhase" | "NotAlive" | "HandsBusy" | "Busy" | "NotFound" | "OutOfRange" | "Blocked" | "WrongTool" | "Cooldown" | "InsufficientItems" | "InventoryFull" | "Occupied" | "LimitReached" | "InvalidState" | "Cancelled" | "InternalError"`. Mensajes localizados en PresentationConfig; no enviar stacktrace. `CueId`: `"ResourceHit" | "ResourceDepleted" | "StructureBuilt" | "StructureHit" | "StructureBroken" | "DoorOpened" | "DoorClosed" | "ContainerOpened" | "Revive" | "Shout" | "CampfireLit" | "CampfireOut" | "PieceInstalled" | "TransmissionStarted" | "TransmissionPaused" | "TransmissionComplete" | "ThreatPresence" | "ThreatFar" | "ThreatNear" | "ThreatVeryNear" | "ThreatAttack" | "DaySighting"`. Cues de amenaza se reservan para F4, sin inventar umbrales aquí.
+`ResultCode` es unión cerrada: `"Ok" | "Accepted" | "InvalidPayload" | "RateLimited" | "StaleRun" | "NotReady" | "WrongPhase" | "NotAlive" | "HandsBusy" | "Busy" | "NotFound" | "OutOfRange" | "Blocked" | "WrongTool" | "Cooldown" | "InsufficientItems" | "InventoryFull" | "Occupied" | "LimitReached" | "InvalidState" | "Cancelled" | "Forbidden" | "InternalError"`. `Forbidden` solo lo usan los Remotes de debug fuera de Studio. Mensajes localizados en PresentationConfig; no enviar stacktrace. `CueId`: `"ResourceHit" | "ResourceDepleted" | "ItemUsed" | "StructureBuilt" | "StructureHit" | "StructureBroken" | "DoorOpened" | "DoorClosed" | "ContainerOpened" | "Revive" | "Shout" | "CampfireLit" | "CampfireOut" | "PieceInstalled" | "TransmissionStarted" | "TransmissionPaused" | "TransmissionComplete" | "ThreatPresence" | "ThreatFar" | "ThreatNear" | "ThreatVeryNear" | "ThreatAttack" | "DaySighting"`. Cues de amenaza se reservan para F4, sin inventar umbrales aquí.
 
 ## Tipos completos de Snapshot
 
@@ -144,7 +144,7 @@ Tipos compartidos futuros en `types.luau`. `number` de conteos/índices implica 
 
 ```luau
 type Phase = "Lobby" | "Day" | "Dusk" | "Night" | "Dawn" | "Result"
-type ItemId = "Madera" | "Piedra" | "Pila" | "Chatarra" | "Hacha" | "Pico" | "Venda"
+type ItemId = string -- F2: data-driven; el servidor lo valida contra ItemsConfig.Items
 type PieceId = "Bateria" | "Antena" | "Transceptor" | "Cristal"
 type LifeState = "Alive" | "Downed" | "Spectating"
 type Stack = {slot: number, itemId: ItemId, count: number}
@@ -162,6 +162,7 @@ type SelfView = {
     profile: "Loading" | "Ready" | "Unavailable",
     save: "Pending" | "Saved" | "Unavailable",
     stamina: number, maxStamina: number, battery: number, maxBattery: number,
+    hunger: number, maxHunger: number,
     moveMode: "Walk" | "Sprint" | "Crouch", equippedSlot: number,
     inventory: {Stack}, meta: MetaView?, bleedoutAt: number?,
     soloChanceAvailable: boolean, autoReviveAt: number?,

@@ -8,6 +8,8 @@ type State = {
 	health: number,
 	stamina: number,
 	battery: number,
+	hunger: number,
+	carrying: string?, -- lo escribe ObjectiveService (F3)
 	flashlightOn: boolean,
 	mode: string,
 	life: string,
@@ -30,6 +32,12 @@ type State = {
 local states: { [Player]: State } = {}
 local playerConfig: any
 local net: any
+local itemsConfig: any
+local inventory: any
+local interaction: any
+local replication: any
+local runActive = false
+local damageListeners: { (Player) -> () } = {}
 local connections: { RBXScriptConnection } = {}
 
 local function parts(character: Model): (BasePart?, Humanoid?)
@@ -213,6 +221,8 @@ local function addPlayer(player: Player)
 		health = playerConfig.Health.Max,
 		stamina = playerConfig.Stamina.Max,
 		battery = playerConfig.Flashlight.InitialBattery,
+		hunger = playerConfig.Hunger.Initial,
+		carrying = nil,
 		flashlightOn = false,
 		mode = "Walk",
 		life = "Alive",
@@ -243,10 +253,48 @@ function Service.Init(context: { [string]: unknown })
 	local configs = context.Configs :: any
 	playerConfig = configs.PlayerConfig
 	net = configs.NetworkConfig
+	itemsConfig = configs.ItemsConfig.Items
+	local services = context.Services :: any
+	inventory = services.InventoryService
+	interaction = services.InteractionService
+	replication = services.ReplicationService
 	Players.CharacterAutoLoads = false
 end
 
 function Service.Start()
+	interaction.Register("UseItem", {
+		Prepare = function(player: Player, itemId: string)
+			local item = itemsConfig[itemId]
+			if not item or not item.Use then
+				return "NotFound", nil
+			end
+			if inventory.Count(player.UserId, itemId) < 1 then
+				return "InsufficientItems", nil
+			end
+			if not Service.CanApplyUse(player, item.Use) then
+				return "InvalidState", nil
+			end
+			return "Ok",
+				{
+					hold = item.Use.HoldSeconds,
+					key = "self:" .. player.UserId,
+					cancelOnDamage = item.Use.CancelOnDamage,
+				}
+		end,
+		-- Consume 1 y aplica el efecto en la misma operacion; el servidor ya revalido en este mismo tick.
+		Commit = function(player: Player, itemId: string)
+			local ok, code = inventory.TryApplyDelta(player.UserId, { [itemId] = -1 }, "UseItem:" .. itemId)
+			if not ok then
+				return code
+			end
+			Service.ApplyUse(player, itemsConfig[itemId].Use)
+			local position = states[player] and states[player].validPosition
+			if position then
+				replication.EmitFeedback("ItemUsed", tostring(player.UserId), position, { player })
+			end
+			return "Ok"
+		end,
+	})
 	table.insert(connections, Players.PlayerAdded:Connect(addPlayer))
 	table.insert(
 		connections,
@@ -287,11 +335,18 @@ function Service.Start()
 						state.previousSpeed = playerConfig.Speed.Sprint
 						state.graceUntil = now + net.SpeedDowngradeGraceSeconds
 					end
-				elseif now - state.lastDrain >= playerConfig.Stamina.RegenDelaySeconds then
+				elseif now - state.lastDrain >= playerConfig.Stamina.RegenDelaySeconds and state.hunger > 0 then
 					state.stamina =
 						math.min(playerConfig.Stamina.Max, state.stamina + dt * playerConfig.Stamina.RegenPerSecond)
 					if state.stamina >= playerConfig.Stamina.RestartSprintAt then
 						state.sprintExhausted = false
+					end
+				end
+				if runActive and state.life == "Alive" then
+					local hunger = playerConfig.Hunger
+					state.hunger = math.max(0, state.hunger - dt * hunger.DrainPerSecond)
+					if state.hunger == 0 then
+						Service.ApplyDamage(player, dt * hunger.StarveDamagePerSecond, "Hunger")
 					end
 				end
 				if state.character then
@@ -358,9 +413,18 @@ function Service.SetFlashlight(player: Player, enabled: boolean): boolean
 	state.flashlightOn = enabled and state.battery > 0
 	return true
 end
-function Service.ApplyDamage(player: Player, amount: number)
+-- source "Enemy" (por defecto) puede derribar y cancela holds; "Hunger" nunca baja de StarveHealthFloor, no derriba
+-- y no cancela interacciones.
+function Service.ApplyDamage(player: Player, amount: number, source: string?)
 	local state = states[player]
 	if not state or state.life ~= "Alive" or amount ~= amount or math.abs(amount) == math.huge or amount <= 0 then
+		return
+	end
+	if source == "Hunger" then
+		local floor = playerConfig.Hunger.StarveHealthFloor
+		if state.health > floor then
+			state.health = math.max(floor, state.health - amount)
+		end
 		return
 	end
 	state.health = math.max(0, state.health - amount)
@@ -370,8 +434,56 @@ function Service.ApplyDamage(player: Player, amount: number)
 		state.mode = "Walk"
 		configure(state)
 	end
+	for _, listener in damageListeners do
+		listener(player)
+	end
 end
-function Service.RespawnAtDawn(_player: Player)
+function Service.OnEnemyDamage(listener: (Player) -> ())
+	table.insert(damageListeners, listener)
+end
+function Service.HandsFree(player: Player): boolean
+	local state = states[player]
+	return state ~= nil and state.life == "Alive" and state.carrying == nil
+end
+-- Efectos de consumibles (ItemsConfig.Items[id].Use): nunca superan el maximo; se rechaza si se desperdicia entero.
+function Service.CanApplyUse(player: Player, use: any): boolean
+	local state = states[player]
+	if not state or state.life ~= "Alive" then
+		return false
+	end
+	return (use.Health ~= nil and state.health < playerConfig.Health.Max)
+		or (use.Hunger ~= nil and state.hunger < playerConfig.Hunger.Max)
+		or (use.Battery ~= nil and state.battery < playerConfig.Flashlight.MaxBattery)
+end
+function Service.ApplyUse(player: Player, use: any): boolean
+	local state = states[player]
+	if not state or not Service.CanApplyUse(player, use) then
+		return false
+	end
+	state.health = math.min(playerConfig.Health.Max, state.health + (use.Health or 0))
+	state.hunger = math.min(playerConfig.Hunger.Max, state.hunger + (use.Hunger or 0))
+	state.battery = math.min(playerConfig.Flashlight.MaxBattery, state.battery + (use.Battery or 0))
+	return true
+end
+-- Nueva run: hambre inicial y reloj de hambre activo. EndRun lo detiene (no baja en Lobby/Result).
+function Service.BeginRun(_runId: string)
+	runActive = true
+	for _, state in states do
+		state.hunger = playerConfig.Hunger.Initial
+	end
+end
+function Service.EndRun()
+	runActive = false
+end
+function Service.GetHunger(player: Player): number
+	local state = states[player]
+	return if state then state.hunger else 0
+end
+function Service.RespawnAtDawn(player: Player)
+	local state = states[player]
+	if state then
+		state.hunger = playerConfig.Hunger.RespawnValue
+	end
 	-- TODO: ciclo-partida.md; SessionService aun no implementa Amanecer.
 end
 return Service

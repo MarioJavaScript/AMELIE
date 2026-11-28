@@ -19,61 +19,33 @@ if not ui then
 	return
 end
 local views = require(ui:WaitForChild("Views"))
-local controllers: { [string]: unknown } = {}
+type Module = { Init: ({ [string]: unknown }) -> (), Start: () -> () }
+local controllers: { [string]: Module } = {}
 local context: { [string]: unknown } = { Remotes = remotes, Controllers = controllers, Views = views }
 local folder = script:WaitForChild("controllers")
-for _, name in
-	{
-		"StateController",
-		"InputController",
-		"FirstPersonController",
-		"MovementController",
-		"FlashlightController",
-		"InteractionController",
-		"InventoryController",
-		"BuildPreviewController",
-		"EnvironmentController",
-		"SoundController",
-		"HUDController",
-		"SpectatorController",
-	}
-do
-	controllers[name] = require(folder:WaitForChild(name))
+local order = {
+	"StateController",
+	"InputController",
+	"FirstPersonController",
+	"MovementController",
+	"FlashlightController",
+	"InteractionController",
+	"InventoryController",
+	"BuildPreviewController",
+	"EnvironmentController",
+	"SoundController",
+	"FeedbackController",
+	"HUDController",
+	"SpectatorController",
+}
+for _, name in order do
+	-- require devuelve el tipo del modulo; se estrecha al contrato comun Init/Start.
+	controllers[name] = (require(folder:WaitForChild(name)) :: unknown) :: Module
 end
-for _, name in
-	{
-		"StateController",
-		"InputController",
-		"FirstPersonController",
-		"MovementController",
-		"FlashlightController",
-		"InteractionController",
-		"InventoryController",
-		"BuildPreviewController",
-		"EnvironmentController",
-		"SoundController",
-		"HUDController",
-		"SpectatorController",
-	}
-do
-	(controllers[name] :: any).Init(context)
+for _, name in order do
+	controllers[name].Init(context)
 end
-for _, name in
-	{
-		"StateController",
-		"InputController",
-		"FirstPersonController",
-		"MovementController",
-		"FlashlightController",
-		"InteractionController",
-		"InventoryController",
-		"BuildPreviewController",
-		"EnvironmentController",
-		"SoundController",
-		"HUDController",
-		"SpectatorController",
-	}
-do
-	(controllers[name] :: any).Start()
+for _, name in order do
+	controllers[name].Start()
 end
 remotes.RequestSnapshot:FireServer({ requestId = "bootstrap", runId = "" })
