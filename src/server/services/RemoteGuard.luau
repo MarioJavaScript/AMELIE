@@ -3,6 +3,8 @@
 local Guard = {}
 local config: any
 local buckets: { [Player]: { [string]: { tokens: number, at: number } } } = {}
+type Entry = { print: string, at: number, result: any }
+local dedupe: { [Player]: { runId: string, order: { string }, map: { [string]: Entry } } } = {}
 local keys: { [string]: { [string]: string } } = {
 	RequestSnapshot = { requestId = "id", runId = "id" },
 	SetReady = { requestId = "id", runId = "id", ready = "boolean" },
@@ -25,8 +27,7 @@ local actions = {
 	StartTransmission = true,
 	ResumeTransmission = true,
 	RevivePlayer = true,
-	UseBandage = true,
-	ReplaceBattery = true,
+	UseItem = true,
 	RepairStructure = true,
 	FuelCampfire = true,
 	IgniteCampfire = true,
@@ -163,6 +164,63 @@ function Guard.Init(networkConfig: any)
 end
 function Guard.Forget(player: Player)
 	buckets[player] = nil
+	dedupe[player] = nil
+end
+
+-- Cooldowns de gameplay con tolerancia sin acumulacion (remotes.md F0-4). `readyAt` es una tabla del llamador.
+function Guard.CooldownOk(readyAt: any, key: any, now: number): boolean
+	return now >= (readyAt[key] or 0) - config.CooldownToleranceSeconds
+end
+function Guard.CooldownArm(readyAt: any, key: any, seconds: number, now: number)
+	readyAt[key] = math.max(now, readyAt[key] or 0) + seconds
+end
+
+local function serialize(value: any): string
+	if typeof(value) ~= "table" then
+		return tostring(value)
+	end
+	local names = {}
+	for key in value do
+		table.insert(names, tostring(key))
+	end
+	table.sort(names)
+	for index, name in names do
+		names[index] = name .. "=" .. serialize(value[name])
+	end
+	return "{" .. table.concat(names, ",") .. "}"
+end
+local function fingerprint(name: string, payload: any): string
+	local copy = table.clone(payload)
+	copy.requestId = nil
+	return name .. serialize(copy)
+end
+
+-- Deduplicacion por (jugador, runId, requestId): "New", "Replay" (con el ActionResult previo) o "Conflict".
+-- Comodidad de idempotencia, no barrera de seguridad: un replay caducado o desalojado pasa por todo de nuevo.
+function Guard.Recall(player: Player, name: string, payload: any): (string, any?)
+	local cache = dedupe[player]
+	local entry = if cache and cache.runId == payload.runId then cache.map[payload.requestId] else nil
+	if not entry or os.clock() - entry.at > config.DedupSeconds then
+		return "New", nil
+	end
+	if entry.print ~= fingerprint(name, payload) then
+		return "Conflict", nil
+	end
+	return "Replay", entry.result
+end
+function Guard.Remember(player: Player, name: string, payload: any, result: any)
+	local cache = dedupe[player]
+	if not cache or cache.runId ~= payload.runId then
+		cache = { runId = payload.runId, order = {}, map = {} }
+		dedupe[player] = cache
+	end
+	if not cache.map[payload.requestId] then
+		table.insert(cache.order, payload.requestId)
+		if #cache.order > config.DedupEntries then
+			cache.map[table.remove(cache.order, 1) :: string] = nil
+		end
+	end
+	cache.map[payload.requestId] = { print = fingerprint(name, payload), at = os.clock(), result = result }
 end
 function Guard.Check(player: Player, name: string, ...: unknown): (boolean, string, any?)
 	if not consume(player, name, os.clock()) then

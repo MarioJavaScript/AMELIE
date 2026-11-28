@@ -11,8 +11,7 @@ export type InteractionAction =
 	| "StartTransmission"
 	| "ResumeTransmission"
 	| "RevivePlayer"
-	| "UseBandage"
-	| "ReplaceBattery"
+	| "UseItem"
 	| "RepairStructure"
 	| "FuelCampfire"
 	| "IgniteCampfire"
@@ -36,7 +35,7 @@ export type CancelInteraction = Req & { interactionId: string }
 export type Shout = Req
 export type DebugBridge = Req & { enabled: boolean }
 export type Phase = "Lobby" | "Day" | "Dusk" | "Night" | "Dawn" | "Result"
-export type ItemId = "Madera" | "Piedra" | "Pila" | "Chatarra" | "Hacha" | "Pico" | "Venda"
+export type ItemId = string -- data-driven: el servidor lo valida contra ItemsConfig.Items
 export type PieceId = "Bateria" | "Antena" | "Transceptor" | "Cristal"
 export type LifeState = "Alive" | "Downed" | "Spectating"
 export type Stack = { slot: number, itemId: ItemId, count: number }
@@ -67,6 +66,8 @@ export type SelfView = {
 	maxStamina: number,
 	battery: number,
 	maxBattery: number,
+	hunger: number,
+	maxHunger: number,
 	moveMode: "Walk" | "Sprint" | "Crouch",
 	equippedSlot: number,
 	inventory: { Stack },
@@ -150,6 +151,7 @@ export type ResultCode =
 	| "LimitReached"
 	| "InvalidState"
 	| "Cancelled"
+	| "Forbidden"
 	| "InternalError"
 export type ActionResult = {
 	runId: string,
@@ -173,6 +175,7 @@ export type InteractionState = {
 export type CueId =
 	"ResourceHit"
 	| "ResourceDepleted"
+	| "ItemUsed"
 	| "StructureBuilt"
 	| "StructureHit"
 	| "StructureBroken"

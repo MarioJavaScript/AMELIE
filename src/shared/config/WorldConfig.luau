@@ -1,5 +1,10 @@
 --!strict
 return {
+	PrefabsName = "Prefabs",
+	MarkersName = "Markers",
+	RuntimeName = "Runtime",
+	ResourcesFolder = "Resources",
+	ContainersFolder = "Containers",
 	PrefabNames = {
 		"Cimiento",
 		"Pared",
@@ -9,6 +14,8 @@ return {
 		"AcechadorMenor",
 		"Arbol",
 		"Roca",
+		"Arbusto",
+		"Contenedor",
 		"Mochila",
 		"Pila",
 		"Chatarra",

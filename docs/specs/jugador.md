@@ -49,11 +49,42 @@ Salto deshabilitado en servidor y cliente (estado Jumping desactivado y altura d
 
 Máximo 100 HP, revive a 40 HP, respawn a 100. Humanoid no destruye personaje al llegar al estado Downed: PlayerService intercepta daño y controla estados; una muerte física imprevista se trata como pérdida inesperada del personaje (ver «Ciclo de vida del personaje de Roblox»), nunca con respawn automático de Roblox.
 
-Venda: consume 1 `Venda`, hold 2 s, restaura 35 HP sin superar máximo; solo sobre uno mismo Alive y herido. Interrumpir no consume. No revive, no sirve caído ni cargando una pieza. Fogata encendida regenera 2 HP/s dentro de 8 studs tras 5 s sin daño; solo Alive, no acumula varios fuegos, requiere línea de visión. Esos valores viven en `StructuresConfig.Fogata.Healing`. Sin regeneración pasiva adicional. Daño de enemigos se definirá en EnemiesConfig/F4; herramientas no hacen PvP. No hay daño por caída en MVP; salir de límites se trata como caída por entorno, no concede recursos.
+Consumibles (acción `BeginInteraction` con `action = "UseItem"` y `targetId = <ItemId>`, ver [remotes](remotes.md) y [recolección](recoleccion-inventario.md)). El servidor mide el hold, comprueba al final y consume 1 unidad junto al efecto. Solo sobre uno mismo, Alive y con manos libres. Interrumpir no consume. Ninguno revive ni sirve caído.
+
+| Ítem | Hold | Efecto | Requisito | ¿Lo interrumpe recibir daño? |
+|---|---:|---|---|---|
+| `Venda` | 2 s | +35 HP | HP < máximo | No (rápida) |
+| `Botiquin` | 6 s | +80 HP | HP < máximo | Sí |
+| `Lata` | 2 s | +40 hambre | hambre < máximo | No |
+| `Baya` | 0.5 s | +8 hambre | hambre < máximo | No |
+| `Pila` | 2 s | +50 batería | batería < máximo | No |
+
+**Decisión de spec:** los valores viven en `ItemsConfig.Items[<ItemId>].Use` (`HoldSeconds`, `Health`, `Hunger`, `Battery`, `CancelOnDamage`), no en PlayerConfig. Añadir un consumible con efectos existentes es solo config. `CancelOnDamage = false` es una excepción explícita a la regla común de cancelar por daño ([remotes](remotes.md)); moverse más de 1.5 studs sigue cancelando. Ningún efecto supera el máximo.
+
+Fogata encendida regenera 2 HP/s dentro de 8 studs tras 5 s sin daño; solo Alive, no acumula varios fuegos, requiere línea de visión. Esos valores viven en `StructuresConfig.Fogata.Healing`. Sin regeneración pasiva adicional. Daño de enemigos se definirá en EnemiesConfig/F4; herramientas no hacen PvP. No hay daño por caída en MVP; salir de límites se trata como caída por entorno, no concede recursos.
+
+## Hambre
+
+Aprobada para el MVP (GDD sección 1). Valores en `PlayerConfig.Hunger`:
+
+| Campo | Valor | Notas |
+|---|---:|---|
+| `Max` | 100 | |
+| `Initial` | 100 | Al empezar la run |
+| `RespawnValue` | 60 | Al reaparecer como Spectating al amanecer. Downed levantado y revivido conservan el suyo |
+| `DrainPerSecond` | 0.0833 | 100 en 20 min. Baja en Day, Dusk, Night y Dawn mientras el jugador está Alive; no baja en Lobby, Result, Downed ni Spectating |
+| `StarveDamagePerSecond` | 0.25 | Solo con hambre en 0 y Alive |
+| `StarveHealthFloor` | 10 | El hambre no baja la vida por debajo de 10: nunca derriba por sí sola |
+
+- Con hambre en 0 la estamina no se regenera (el gasto al correr sigue igual).
+- Reloj de servidor, acumulado como la batería: no depende de ticks enteros ni del cliente.
+- El daño por hambre no es daño de enemigo: no cancela interacciones (`CancelOnDamage`) ni reinicia el retraso de curación de la fogata. La fogata puede curar por encima del daño por hambre.
+- Se replica solo al propio jugador en `SelfView.hunger` y `SelfView.maxHunger`.
+- Noche 1 y excepciones de solo no cambian: como no derriba, no interactúa con ellas.
 
 ## Linterna
 
-Linterna integrada no ocupa slot, no se pierde, puede encenderse cargando una pieza (montaje de pecho, **decisión de spec**). Batería máxima 100; inicial/respawn 50; consume 0.5/s encendida, calculado sobre el tiempo encendido acumulado con reloj servidor (encender y apagar rápido no evita el gasto, F0-4). A 0 se apaga en servidor. Una `Pila` restaura 50, cap 100; cambiarla tarda 2 s, requiere batería menor al máximo y manos libres. Se consume al finalizar y no recarga automáticamente. La pieza de radio `Bateria` no es una Pila de inventario.
+Linterna integrada no ocupa slot, no se pierde, puede encenderse cargando una pieza (montaje de pecho, **decisión de spec**). Batería máxima 100; inicial/respawn 50; consume 0.5/s encendida, calculado sobre el tiempo encendido acumulado con reloj servidor (encender y apagar rápido no evita el gasto, F0-4). A 0 se apaga en servidor. Una `Pila` restaura 50, cap 100; se usa con `UseItem` (2 s), requiere batería menor al máximo y manos libres. Se consume al finalizar y no recarga automáticamente. La pieza de radio `Bateria` no es una Pila de inventario.
 
 Servidor mantiene on/off, carga y orientación validada de foco; cliente interpola HUD y dibuja la luz. El servidor no lee la intensidad de un SpotLight creado por cliente. Dirección, cono y alcance se exponen a StimulusService; parámetros ópticos en StimuliConfig. Al caer o morir se apaga; revivir no enciende automáticamente. Parpadeo de amenaza es visual y no evita consumo/detección, salvo futuros hechos explícitos de IA.
 
@@ -80,6 +111,6 @@ Durante final de run se bloquean daño e interacción. Participantes muertos o c
 
 ## Kit inicial y pruebas futuras
 
-`PlayerConfig.InitialItems`: 4 Madera y 4 Piedra por participante, linterna a 50, sin herramienta (decisión de spec para poder fabricar hacha/pico). Recolección manual también garantiza recuperación tras perder herramientas.
+`PlayerConfig.InitialItems`: 4 Madera y 4 Piedra por participante, linterna a 50, hambre a 100, sin herramienta (decisión de spec para poder fabricar hacha/pico). Recolección manual también garantiza recuperación tras perder herramientas.
 
 En Studio: probar dos clientes, agotamiento y recuperación, crouch silencioso, bloqueo con antena, batería vacía y recambio cancelado; caer, revivir en 4 s y romper LOS; mochila única al rematar/desconectar; noche 1 sin muerte; en solo una oportunidad cada noche y segunda caída derrotando; día sin auto-revive y amanecer con inventario vacío del muerto. Intentar velocidad falsa y acción desde posición inválida no debe dar ventajas. Con cliente modificado: volar, atravesar una pared de la base o de la mina, teletransportarse y desconectarse con una pieza, reiniciar el personaje de noche y destruir el Humanoid; ninguno debe mover la posición validada, cambiar el estado vital ni restaurar vida.

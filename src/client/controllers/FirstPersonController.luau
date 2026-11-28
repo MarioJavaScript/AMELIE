@@ -12,12 +12,14 @@ local Config = Shared:WaitForChild("config")
 local PlayerConfig = require(Config:WaitForChild("PlayerConfig"))
 local PresentationConfig = require(Config:WaitForChild("PresentationConfig"))
 
+local ClientTypes = require(script.Parent.Parent:WaitForChild("ClientTypes"))
+
 local Controller = {}
 
 export type Context = { [string]: unknown }
 
 local localPlayer = Players.LocalPlayer
-local controllers: { [string]: any } = {}
+local controllers = {} :: ClientTypes.Controllers
 
 local connections: { RBXScriptConnection } = {}
 local humanoid: Humanoid? = nil
@@ -108,7 +110,7 @@ local function disableResetButton()
 end
 
 function Controller.Init(context: Context)
-	controllers = context.Controllers :: { [string]: any }
+	controllers = context.Controllers :: ClientTypes.Controllers
 end
 
 function Controller.Start()

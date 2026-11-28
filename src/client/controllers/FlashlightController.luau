@@ -15,6 +15,8 @@ local PresentationConfig = require(Config:WaitForChild("PresentationConfig"))
 local StimuliConfig = require(Config:WaitForChild("StimuliConfig"))
 local DebugCommands = require(script.Parent.Parent:WaitForChild("DebugCommands"))
 
+local ClientTypes = require(script.Parent.Parent:WaitForChild("ClientTypes"))
+
 local Controller = {}
 
 export type Context = { [string]: unknown }
@@ -22,7 +24,7 @@ export type Context = { [string]: unknown }
 local AIM_SEND_INTERVAL_SECONDS = 1 / 10
 
 local remotes: { [string]: RemoteEvent } = {}
-local controllers: { [string]: any } = {}
+local controllers = {} :: ClientTypes.Controllers
 local connections: { RBXScriptConnection } = {}
 local unsubscribers: { () -> () } = {}
 
@@ -143,7 +145,10 @@ local function onFeedback(payload: unknown)
 		return
 	end
 	local cue = (payload :: { [string]: unknown }).cueId
-	if typeof(cue) == "string" and (PresentationConfig.Flashlight.FlickerCues :: any)[cue] == true then
+	if
+		typeof(cue) == "string"
+		and (PresentationConfig.Flashlight.FlickerCues :: { [string]: boolean })[cue] == true
+	then
 		Controller.Flicker(PresentationConfig.Flashlight.FlickerSeconds)
 	end
 end
@@ -234,7 +239,7 @@ end
 
 function Controller.Init(context: Context)
 	remotes = context.Remotes :: { [string]: RemoteEvent }
-	controllers = context.Controllers :: { [string]: any }
+	controllers = context.Controllers :: ClientTypes.Controllers
 end
 
 function Controller.Start()

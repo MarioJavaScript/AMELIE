@@ -334,7 +334,7 @@ local LORE: { Lore } = {
 local SENSORS: { Vector2 } = { v2(-60, -470), v2(70, -480), v2(60, -640), v2(-80, -630) }
 local CAMP = v2(0, -520)
 
--- Recursos (7): lo que se reparte y como. Total 68 Arbol / 42 Roca.
+-- Recursos (7): lo que se reparte y como. Total 68 Arbol / 42 Roca / 24 Arbusto.
 type ResEntry = { zone: string, kind: string, n: number, s: string, rock: boolean? }
 local RES_PLAN: { ResEntry } = {
 	{ zone = "Base", kind = "Arbol", n = 16, s = "BaseRing" },
@@ -352,6 +352,9 @@ local RES_PLAN: { ResEntry } = {
 	{ zone = "BosqueAnomalo", kind = "Arbol", n = 12, s = "SenderoAnomalo" },
 	{ zone = "BosqueAnomalo", kind = "Roca", n = 2, s = "SenderoAnomalo" },
 	{ zone = "Complejo", kind = "Roca", n = 2, s = "Complejo" },
+	-- Arbustos de bayas al final: no alteran semilla ni colocacion de Arbol/Roca (semilla por indice).
+	{ zone = "Bosque", kind = "Arbusto", n = 20, s = "BosqueRoad" },
+	{ zone = "Torre", kind = "Arbusto", n = 4, s = "TorrePie" },
 }
 local ZONE_STRICT = { Bosque = true, Ciudad = true, Industrial = true, BosqueAnomalo = true, Complejo = true }
 local MINA_ROCKS: { Vector2 } = {
@@ -368,7 +371,7 @@ local MINA_ROCKS: { Vector2 } = {
 local EXPECTED = {
 	{ "MapZone", 7 },
 	{ "PieceSpawn", 12 },
-	{ "ResourceSpawn", 110 },
+	{ "ResourceSpawn", 134 },
 	{ "LootSpawn", 13 },
 	{ "EnemySpawn", 4 },
 	{ "Nest", 1 },
@@ -938,7 +941,7 @@ local function nodeAt(e: ResEntry, p: Vector2, fixedY: number?, out: { Node }, a
 	if e.rock and m ~= Mat.Rock then
 		return nil
 	end
-	if e.kind == "Arbol" and (m == Mat.Rock or m == Mat.Slate) then
+	if e.kind ~= "Roca" and (m == Mat.Rock or m == Mat.Slate) then
 		return nil
 	end
 	if e.zone ~= "Torre" and hit.Position.Y > 20 then
@@ -1114,7 +1117,8 @@ local function baseZone(map: Folder)
 	for i, id in { "Bateria", "Antena", "Transceptor", "Cristal" } do
 		part(radio, "Socket_" .. id, CFrame.new(-1.5 + (i - 1), 4, -2.85), v3(0.8, 0.8, 0.3), C.Black)
 	end
-	part(f, "Estante", CFrame.new(6, 2.5, -4), v3(2, 5, 4), C.Brown)
+	-- Lejos del contenedor Base_01 (6, 0, -4): su Hitbox no debe solapar el estante o el LOS queda bloqueado.
+	part(f, "Estante", CFrame.new(-6, 2.5, -4), v3(2, 5, 4), C.Brown)
 end
 
 local function ciudad(map: Folder)
@@ -1974,7 +1978,7 @@ local function marcadores(map: Folder)
 	end
 
 	local res = folder(root, "ResourceSpawns")
-	local counters: { [string]: number } = { Arbol = 0, Roca = 0 }
+	local counters: { [string]: number } = { Arbol = 0, Roca = 0, Arbusto = 0 }
 	for _, n in planResources() do
 		counters[n.kind] += 1
 		spot(
@@ -2104,7 +2108,7 @@ local function summary(strict: boolean)
 	for _, e in EXPECTED do
 		check(e[1] :: string, #CollectionService:GetTagged(e[1] :: string), e[2] :: number)
 	end
-	local kinds: { [string]: number } = { Arbol = 0, Roca = 0 }
+	local kinds: { [string]: number } = { Arbol = 0, Roca = 0, Arbusto = 0 }
 	for _, inst in CollectionService:GetTagged("ResourceSpawn") do
 		local k = inst:GetAttribute("Kind")
 		if type(k) == "string" and kinds[k] then
@@ -2113,6 +2117,7 @@ local function summary(strict: boolean)
 	end
 	check("ResourceSpawn Arbol", kinds.Arbol, 68)
 	check("ResourceSpawn Roca", kinds.Roca, 42)
+	check("ResourceSpawn Arbusto", kinds.Arbusto, 24)
 	local routes: { [string]: number } = {}
 	for _, inst in CollectionService:GetTagged("PatrolPoint") do
 		local id = inst:GetAttribute("RouteId")

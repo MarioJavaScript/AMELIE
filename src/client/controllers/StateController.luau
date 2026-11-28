@@ -131,6 +131,8 @@ function Controller.DebugInject(patch: { [string]: unknown })
 				maxStamina = 100,
 				battery = 50,
 				maxBattery = 100,
+				hunger = 100,
+				maxHunger = 100,
 				moveMode = "Walk",
 				equippedSlot = 0,
 				inventory = {},
@@ -158,7 +160,8 @@ function Controller.DebugInject(patch: { [string]: unknown })
 		merged[key] = value
 	end
 	merged.revision = base.revision + 1
-	accept(merged :: any)
+	-- Parche de depuracion: se confia en que mantiene la forma de Snapshot (solo Studio).
+	accept((merged :: unknown) :: Snapshot)
 end
 
 -- Solo Studio: true mientras el snapshot vigente es el inyectado (no hay servidor que lo confirme).
@@ -174,7 +177,7 @@ function Controller.DebugPatchSelfPlayer(patch: { [string]: unknown })
 	end
 	local existing = Controller.GetSelfPlayer()
 	local view: { [string]: unknown } = if existing ~= nil
-		then table.clone(existing) :: any
+		then table.clone(existing) :: { [string]: unknown }
 		else {
 			id = "debug_self",
 			userId = Players.LocalPlayer.UserId,

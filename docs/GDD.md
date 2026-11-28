@@ -52,6 +52,9 @@ Si el grupo es aniquilado o se acaba el tiempo, la partida termina en derrota (s
 Explorar → recolectar → oír una señal → decidir (seguir o volver) → volver con recursos o una pieza → reforzar la base → aguantar la noche.
 La tensión de cada día es **avaricia contra seguridad**: cada minuto más fuera de la base da más recursos, pero acerca el atardecer.
 
+### Hambre (MVP, sencilla)
+Una barra de hambre que baja lento (llena dura unos 20 min). En 0, la estamina no se regenera y se pierde vida poco a poco, sin llegar a derribar por sí sola. Se come con **latas** (loot de la ciudad y del distrito industrial) y **bayas** (arbustos recolectables del bosque normal del territorio inicial). Es una presión de fondo que empuja a salir de la base, no un sistema de gestión. La sed queda fuera del MVP. Valores en `PlayerConfig.Hunger` ([jugador](specs/jugador.md)).
+
 ---
 
 ## 2. Objetivo principal: "Señal de rescate"
@@ -256,21 +259,21 @@ En el MVP el director es solo un temporizador de fases dentro de la noche. Post-
 | Partida | Co-op 1-4, lobby simple, 5 noches, victoria y derrota, pantalla final con estadísticas |
 | Mapa | 1 mapa en dos territorios unidos por un puente reconstruible: base, ciudad con gasolinera y mina (acto 1); distrito industrial, bosque anómalo y complejo científico (acto 2). 4 zonas de piezas con 3 puntos de aparición cada una. Torre como mirador secundario |
 | Objetivo | 4 piezas, radio con 4 huecos, transmisión de 3 min, rescate al amanecer |
-| Jugador | Primera persona, estamina, salud, agacharse, linterna con batería, caer/revivir/reaparecer |
-| Recursos | Madera, piedra, pilas, chatarra |
-| Herramientas | Hacha, pico (crafteo rápido), vendas |
+| Jugador | Primera persona, estamina, salud, hambre sencilla, agacharse, linterna con batería, caer/revivir/reaparecer |
+| Recursos | Madera, piedra, pilas, chatarra, comida (latas y bayas) |
+| Herramientas y consumibles | Hacha, pico (crafteo rápido), vendas, botiquín, comida |
 | Construcción | Cimiento, pared, marco con puerta, fogata; reparar; HP de estructuras |
 | Enemigos | Criatura principal + 1 tipo de acechador menor (la misma IA con otros parámetros) |
 | Terror | Escalera de avisos, ruido y luz como estímulos, niebla por noche, atardecer, director simple por fases |
 | Audio | Ambiente día/noche, pasos, golpes, criatura (llamado, pasos, chillido), estática de la radio |
 | Guardado | Solo progreso meta (D2 = A) |
-| UI | HUD (vida, estamina, batería, hora), inventario, crafteo, panel de objetivos (piezas X/4), fin de partida |
+| UI | HUD (vida, estamina, hambre, batería, hora), inventario, crafteo, panel de objetivos (piezas X/4), fin de partida |
 
 ### Queda fuera del MVP
 
 - 5ª pieza de radio y zonas extra.
 - Objetivos secundarios diarios ("consigue 10 de madera", etc.).
-- Hambre, sed, frío, clima dinámico.
+- Sed, frío, clima dinámico. (El hambre sencilla sí entra, ver sección 1.)
 - Varios mapas o mapa procedural.
 - Más tipos de enemigos o jefes.
 - Armas para matar a la criatura. **No se puede matar a la criatura principal** (se puede aturdir con luz/ruido post-MVP).
@@ -297,6 +300,10 @@ Aprobados por Mario: D1, D2, D3, 5 noches y tabla de dificultad, antena pesada, 
 ### Rediseño del mundo en dos actos (2026-11-27)
 
 Aprobado por Mario: dos territorios separados por un río; el puente como única conexión, reconstruido a mitad de partida sin tiempos artificiales; criatura principal que cruza a nado desde la noche 1; acechadores anómalos que solo cruzan por el puente construido; mina sin nido (dificultad media, minerales); nido en los sótanos del complejo científico; bosque anómalo preparado para mecánicas futuras; piezas en gasolinera, mina, distrito industrial y complejo; Antena en una azotea industrial; narrativa ambiental (consecuencias al sur, origen escondido al norte). El pantano desaparece y la torre queda como mirador opcional. Implementación del puente: Fase 3. En F1 solo hay un comando de debug en Studio.
+
+### Hambre en el MVP (2026-11-27)
+
+Aprobado por Mario: entra el hambre sencilla (barra que baja lento; en 0 no se regenera estamina y se pierde vida lento). Comida: latas en el loot de la ciudad y del distrito industrial, bayas recolectables en el bosque normal. Se añade el botiquín (cura mucho, lento, se interrumpe al recibir daño). La sed sigue fuera del MVP.
 
 ## 8. Siguientes documentos que dependen de este
 

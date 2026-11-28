@@ -38,7 +38,8 @@ Sin cambios respecto a la revisión 1.
 | Radio | (0, 3.5, -4) | modelo 4 x 2 x 2 | Fija, indestructible, 4 sockets visuales |
 | Fogata (socket) | (0, 0, 18) | 4 x 1 x 4 | Único `CampfireSocket` |
 | BaseSpawn | (-8, 0, 18) | 8 x 1 x 8 | Lugar del `SpawnLocation` (sección 10) |
-| Estante base | (6, 0, -4) | 2 x 5 x 4 | Loot de base (2 Pila) |
+| Estante base | (-6, 0, -4) | 2 x 5 x 4 | Decorado, lado oeste. No solapa el contenedor de loot |
+| Loot de base | (6, 0, -4) | contenedor | `LootSpawns/Base_01` (2 Pila), en el suelo, lado este |
 | BuildZone Base | centro (0, 0, 0) | 96 x 96 (X -48..48, Z -48..48), cota 0 | 12 x 12 celdas de 8 |
 
 Salidas del claro: norte (cortafuegos al puente), este (sendero a la ciudad) y oeste (sendero a la mina). Las ventanas norte miran por el cortafuegos al puente y, al otro lado del río, a la chimenea del distrito industrial.
@@ -350,6 +351,8 @@ Ruta: `Workspace/Markers/ResourceSpawns/<Kind>_NNN`. Tag `ResourceSpawn`, atribu
 | Complejo | 0 | 2 | Dentro de la cerca |
 | Total | 68 | 42 | 110 nodos (88 en el acto 1) |
 
+Arbustos de bayas (F2, comida): 24 marcadores más con `Kind = "Arbusto"` (`Arbusto_001..024`), solo en el bosque normal del territorio inicial: 20 en `Bosque` (a 8-30 studs de los caminos del territorio inicial) y 4 en `Torre` (pie de la loma). Ninguno en el claro de la base ni en el territorio avanzado. Prefab `Arbusto` de PrefabBuilder (recoleccion-inventario.md). Con ellos `ResourceSpawn` pasa a 134 (68 Arbol, 42 Roca, 24 Arbusto).
+
 Reglas de colocación (deterministas, semilla fija): separación mínima 8; ninguno a menos de 6 del centro de un camino, sobre el agua o en la garganta, en una NoBuildZone ni a menos de 4 de un marcador de pieza, loot o spawn. La Y sale de un raycast contra el terreno y las Parts del mapa.
 
 ### Bosque decorativo (no recolectable)
@@ -491,7 +494,7 @@ ServerStorage
 
 ### LootSpawns
 
-13 en total, como pide recoleccion-inventario.md (`ResourcesConfig.ZoneLoot`, 3 contenedores por zona de pieza): 3 por zona de pieza (`<ZoneId>_01..03`, 1 Pila y 2 Chatarra cada uno) y `Base_01` en el estante. La torre y el bosque anómalo no tienen loot.
+13 en total, como pide recoleccion-inventario.md (`ResourcesConfig.ZoneLoot`, 3 contenedores por zona de pieza): 3 por zona de pieza (`<ZoneId>_01..03`, 1 Pila y 2 Chatarra cada uno) y `Base_01` en el suelo de la caseta, lado este (6, 0, -4). La torre y el bosque anómalo no tienen loot.
 
 | ZoneId | 01 | 02 | 03 |
 |---|---|---|---|
@@ -553,7 +556,7 @@ Sin cambios: Caseta (0, 5, 0) 24 x 12 x 20; PuertaCaseta (0, 5, 12) 8 x 12 x 12;
 ### 12.1 Criterio de listo
 
 Verificación con `search_game_tree` y por código:
-- 7 `MapZone`; 12 `PieceSpawn` (3 por `PieceId`); 110 `ResourceSpawn` (68 Arbol y 42 Roca); 13 `LootSpawn`; 4 `EnemySpawn`; 1 `Nest`; 6 `WaterZone`; 1 `BuildZone`; 4 `NoBuildZone`; 31 `PatrolPoint` en 5 rutas; 9 `Hideout`.
+- 7 `MapZone`; 12 `PieceSpawn` (3 por `PieceId`); 134 `ResourceSpawn` (68 Arbol, 42 Roca y 24 Arbusto); 13 `LootSpawn`; 4 `EnemySpawn`; 1 `Nest`; 6 `WaterZone`; 1 `BuildZone`; 4 `NoBuildZone`; 31 `PatrolPoint` en 5 rutas; 9 `Hideout`.
 - Nuevos: 1 `BridgeSite`; 2 `BridgeEnd`; 6 `CreatureCrossing`; 4 `AnomalyZone`; 13 `LorePoint`; `PlayerBarrier` de X -720 a 720 con un solo hueco en el puente.
 - Existen `BaseSpawn`, `RadioSocket`, `CampfireSocket`, `Map/Base/Radio` con sus 4 sockets, `Map/Puente` con `BridgeBuilt = false` y `ServerStorage/MapVariants/PuenteConstruido`.
 - No existe `Workspace.Baseplate`; hay un único `SpawnLocation`.

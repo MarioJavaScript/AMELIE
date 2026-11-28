@@ -25,7 +25,8 @@ Valores aprobados en `src/shared/config/StimuliConfig.luau`:
 | `WalkStep` | 10 studs | Movimiento Walk verificado |
 | `WaterStep` | 25 studs | Movimiento dentro de un volumen `WaterZone` (río) |
 | `SprintStep` | 35 studs | Sprint autorizado y desplazamiento real |
-| `ResourceHit` | 50 studs | Golpe aceptado a nodo |
+| `ResourceHit` | 50 studs | Golpe aceptado a nodo Arbol o Roca |
+| `Forage` | 15 studs | Golpe aceptado a un arbusto de bayas (F2, `ResourcesConfig.Nodes.Arbusto.NoiseKind`) |
 | `BuildRepair` | 45 studs | Colocación aceptada o reparación mantenida |
 | `MetalOpen` | 30 studs | Puerta metálica/contenedor de gasolinera abierto |
 | `Revive` | 30 studs | Revive mantenido válido |
