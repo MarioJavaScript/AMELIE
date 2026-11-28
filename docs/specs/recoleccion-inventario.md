@@ -48,7 +48,7 @@ Receta: `{Id, Inputs: {[ItemId]: number}, Output: {ItemId: string, Count: number
 
 ## Equipar
 
-`EquipTool {slot}`: 0 desequipa; 1..12 debe contener un ítem con `Equippable = true`. El servidor guarda `equippedSlot`; si ese slot cambia de contenido (consumo, muerte), se desequipa. Cargar una pieza desequipa. El cliente puede mostrar un modelo de herramienta local; el servidor nunca lee su posición.
+`EquipTool {slot}`: 0 desequipa; 1..12 debe contener un ítem con `Equippable = true`. El servidor guarda `equippedSlot`; si ese slot cambia de contenido (consumo, muerte), se desequipa. Cargar una pieza desequipa. El modelo visible en la mano lo suelda el servidor para todos (ver [jugador](jugador.md), «Herramienta en la mano»); el servidor nunca lee su posición.
 
 ## Nodos y golpe
 

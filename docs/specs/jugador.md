@@ -4,7 +4,74 @@ Base: GDD §§1, 4–6. Contratos de red: [remotes](remotes.md). Servidor: Playe
 
 ## Cámara y movimiento
 
-Primera persona durante juego; espectador puede seguir compañeros. Cámara y viewbobbing no afectan hitboxes. Config inicial: FOV 75°, bob amplitud 0.06 studs/frecuencia 8 Hz, reducción de movimiento opcional a amplitud 0. Agacharse baja offset visual 1 stud; en MVP no reduce la cápsula física ni permite atravesar huecos pequeños.
+Primera persona por defecto; la tecla V alterna con tercera persona (ver «Cámara: primera y tercera persona»). Espectador puede seguir compañeros. Cámara y viewbobbing no afectan hitboxes. Config inicial: FOV 75°, bob amplitud 0.06 studs/frecuencia 8 Hz, reducción de movimiento opcional a amplitud 0. Agacharse baja offset visual 1 stud; en MVP no reduce la cápsula física ni permite atravesar huecos pequeños.
+
+### Cámara: primera y tercera persona (F2-6)
+
+Funcional y greybox; el pulido visual va en F7. La cámara es solo del cliente: no se envía al servidor y no cambia hitboxes, alcances, ruido ni validaciones.
+
+- **Modos:** `First` (por defecto al entrar) y `Third`. La tecla `PresentationConfig.InputBindings.ToggleCamera = V` alterna. La elección dura la sesión; no se guarda. No funciona con el inventario o el crafteo abiertos.
+- **Valores** en `PlayerConfig.Camera` (además de `Fov`, `Bob*` y `CrouchOffsetStuds`): `DefaultMode = "First"`, `ThirdPerson = {DistanceStuds = 8, ShoulderOffset = (1.75, 0.5, 0), CollisionRadiusStuds = 0.5, MinDistanceStuds = 1, PushOutSmoothing = 10}`. `ShoulderOffset` va en el espacio de la cámara: X a la derecha, Y arriba.
+- **Común a los dos modos:**
+  - FOV 75.
+  - Ratón bloqueado al centro y mira en el centro.
+  - El personaje gira con la cámara en el eje Y, así que golpe e interacción apuntan donde mira la mira.
+  - El agachado baja la cámara en los dos modos.
+  - El viewbobbing solo se aplica en primera persona.
+- **Primera persona:**
+  - Se ven los brazos, las manos y los modelos en mano del propio personaje, con `LocalTransparencyModifier = 0` aplicado cada frame después del módulo de cámara de Roblox.
+  - Cabeza, accesorios, torso y piernas siguen ocultos.
+  - Con algo en la mano, la pose de sostener (ver «Herramienta en la mano») deja la herramienta visible abajo a la derecha de la pantalla.
+- **Tercera persona:**
+  - La cámara va detrás del hombro derecho, a `DistanceStuds` del pivote (cabeza + `ShoulderOffset`).
+  - Para no atravesar paredes se lanza un spherecast de radio `CollisionRadiusStuds` desde el pivote hacia la posición deseada. Ignora personajes, modelos en mano y partes con `CanCollide = false`.
+  - Si choca, la cámara se coloca en el punto de choque. `MinDistanceStuds` es la distancia mínima preferida, pero la pared manda: la cámara nunca pasa más de medio `CollisionRadiusStuds` más allá de la cara de la pared. Al acercarse por choque lo hace al instante; al alejarse lo hace suavizado con `PushOutSmoothing`.
+  - Si queda a menos de 1.5 studs, el propio personaje se vuelve semitransparente en local.
+- **Apuntado en tercera persona:**
+  - El rayo del cliente para golpe e interacción sale de la cámara y mide `AimRayStuds + distancia(cámara, cabeza)`. Excluye el propio personaje y sus modelos en mano.
+  - El cliente solo propone un objetivo si el punto de impacto está dentro del alcance de interacción o golpe medido desde la cabeza.
+  - El servidor no cambia: valida igual que en primera persona.
+
+### Herramienta en la mano (F2-6)
+
+No se usan `Tool` de Roblox ni la Backpack ([remotes](remotes.md), regla 4 y B7). El servidor decide qué se ve y suelda el modelo al personaje. Al estar dentro del personaje, el modelo se replica a todos sin Remotes nuevos y sin cambios en `PlayerView`. El propietario es `PlayerService` (equipamiento visual, ver [arquitectura](arquitectura.md)), que puede apoyarse en un módulo auxiliar.
+
+**Qué se ve, en orden de prioridad:**
+- **Mano derecha:**
+  1. El consumible de una interacción `UseItem` activa, mientras dura el hold.
+  2. Si no hay ninguna, la herramienta equipada (`InventoryService.GetEquipped`: Hacha o Pico).
+  3. Si no, nada.
+- **Mano izquierda:** el modelo `Linterna` mientras la linterna está encendida (estado del servidor).
+- **Downed o Dead:** no se ve nada en ninguna mano.
+
+**Prefabs** en `ServerStorage/Prefabs/Held/<Nombre>` (`WorldConfig.HeldPrefabsFolder = "Held"`):
+- El nombre de cada ítem sale de `ItemsConfig.Items[id].HeldModel: string?`. Tienen modelo Hacha, Pico, Venda, Botiquin, Lata, Baya y Pila; Madera, Piedra y Chatarra no.
+- La linterna usa `PlayerConfig.FlashlightHeldModel = "Linterna"`.
+- Los genera `tools/map/PrefabBuilder.luau` en greybox.
+
+**Contrato de cada prefab en mano:**
+- `Model` con `PrimaryPart = Handle`.
+- `Handle` tiene un `Attachment` llamado `Grip`. Su posición es el punto donde agarra la mano; su LookVector es hacia dónde apunta la herramienta y su UpVector es arriba.
+- Todas las partes con `Anchored = false`, `CanCollide = false`, `CanTouch = false`, `CanQuery = false` y `Massless = true`, unidas al `Handle` con `WeldConstraint`.
+- Sin scripts.
+- `Linterna` lleva además un `SpotLight` llamado `Beam`. El servidor le pone `Range` y `Angle` de `StimuliConfig.Flashlight` al clonarlo.
+- Si falta un prefab requerido o no cumple el contrato, la run no arranca: mismo error claro que los prefabs de recursos.
+
+**Montaje:**
+- El servidor clona el modelo y lo nombra `HeldRight` o `HeldLeft`, con el atributo `ItemId`.
+- Lo mete en el personaje y lo une alineando `Grip` con el `RightGripAttachment` o `LeftGripAttachment` de la mano (existe en R15 y R6).
+- Reconcilia por jugador (Heartbeat, ≤ 4 jugadores) y solo reemplaza el modelo si cambia lo que debe verse.
+- Al morir, reaparecer o salir del juego, el modelo se destruye.
+- El servidor nunca lee la posición del modelo.
+- En el jugador local, el cliente apaga en local el `Beam` de su propia linterna, porque su luz ya sale de la cámara. Los demás ven el `Beam`.
+
+**Pose y golpe (solo visual):**
+- Cada cliente aplica en local, a todos los personajes, una pose de sostener mientras existe `HeldRight` o `HeldLeft`: brazo levantado al frente, con un offset en el hombro que no se replica. En `Motor6D` se aplica sobre `C0`; en rigs con `AnimationConstraint` (R15 actual), sobre `Transform` en `PreSimulation`, después del Animator. Al desaparecer el modelo, restaura la pose.
+- Cuando `HitResource` se acepta, el servidor incrementa el atributo `SwingSeq` del personaje.
+- Los clientes reproducen el golpe en los demás personajes cuando cambia `SwingSeq`: el brazo derecho sube atrás y baja al frente.
+- El jugador local reproduce su golpe al instante al enviar el golpe e ignora su propio `SwingSeq`.
+- Valores en `PresentationConfig.HeldPose`: ángulos de sostener por brazo, `SwingSeconds = 0.3`, ángulo de golpe.
+- Lo lleva un controller nuevo, `HeldItemController`.
 
 | Magnitud | Valor inicial |
 |---|---:|
@@ -85,6 +152,8 @@ Aprobada para el MVP (GDD sección 1). Valores en `PlayerConfig.Hunger`:
 ## Linterna
 
 Linterna integrada no ocupa slot, no se pierde, puede encenderse cargando una pieza (montaje de pecho, **decisión de spec**). Batería máxima 100; inicial/respawn 50; consume 0.5/s encendida, calculado sobre el tiempo encendido acumulado con reloj servidor (encender y apagar rápido no evita el gasto, F0-4). A 0 se apaga en servidor. Una `Pila` restaura 50, cap 100; se usa con `UseItem` (2 s), requiere batería menor al máximo y manos libres. Se consume al finalizar y no recarga automáticamente. La pieza de radio `Bateria` no es una Pila de inventario.
+
+**Visual de la linterna (F2-6):** el modelo `Linterna` se ve en la mano izquierda mientras está encendida (ver «Herramienta en la mano»). Cuando exista cargar piezas se decidirá si pasa al montaje de pecho. La luz del jugador local sigue saliendo de la cámara; el origen del estímulo de luz lo sigue fijando el servidor ([estímulos](estimulos.md)).
 
 Servidor mantiene on/off, carga y orientación validada de foco; cliente interpola HUD y dibuja la luz. El servidor no lee la intensidad de un SpotLight creado por cliente. Dirección, cono y alcance se exponen a StimulusService; parámetros ópticos en StimuliConfig. Al caer o morir se apaga; revivir no enciende automáticamente. Parpadeo de amenaza es visual y no evita consumo/detección, salvo futuros hechos explícitos de IA.
 

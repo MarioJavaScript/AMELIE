@@ -24,7 +24,18 @@ end
 -- Crea una run con un runId nuevo (ASCII alfanumerico y guion, <= 64 bytes: ver remotes.md) y lo devuelve.
 function Service.BeginRun(): string
 	-- Contenido invalido: la run no arranca (el error del servicio explica el path) y no se toca ningun estado.
-	services.ResourceService.Validate()
+	local problems = services.PlayerService.ValidateHeld()
+	local okResources, resourcesError = pcall(services.ResourceService.Validate)
+	if not okResources or #problems > 0 then
+		local parts = {}
+		if not okResources then
+			table.insert(parts, tostring(resourcesError))
+		end
+		if #problems > 0 then
+			table.insert(parts, "PlayerService: la run no puede arrancar:\n - " .. table.concat(problems, "\n - "))
+		end
+		error(table.concat(parts, "\n"), 0)
+	end
 	local runId = "dev_" .. HttpService:GenerateGUID(false)
 	currentRunId = runId
 	services.InteractionService.CancelAll("Cancelled")
