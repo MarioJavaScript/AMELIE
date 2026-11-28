@@ -259,7 +259,7 @@ En el MVP el director es solo un temporizador de fases dentro de la noche. Post-
 | Partida | Co-op 1-4, lobby simple, 5 noches, victoria y derrota, pantalla final con estadísticas |
 | Mapa | 1 mapa en dos territorios unidos por un puente reconstruible: base, ciudad con gasolinera y mina (acto 1); distrito industrial, bosque anómalo y complejo científico (acto 2). 4 zonas de piezas con 3 puntos de aparición cada una. Torre como mirador secundario |
 | Objetivo | 4 piezas, radio con 4 huecos, transmisión de 3 min, rescate al amanecer |
-| Jugador | Primera persona, estamina, salud, hambre sencilla, agacharse, linterna con batería, caer/revivir/reaparecer |
+| Jugador | Primera persona (V alterna a tercera persona), estamina, salud, hambre sencilla, agacharse, linterna con batería, caer/revivir/reaparecer |
 | Recursos | Madera, piedra, pilas, chatarra, comida (latas y bayas) |
 | Herramientas y consumibles | Hacha, pico (crafteo rápido), vendas, botiquín, comida |
 | Construcción | Cimiento, pared, marco con puerta, fogata; reparar; HP de estructuras |
@@ -305,9 +305,13 @@ Aprobado por Mario: dos territorios separados por un río; el puente como única
 
 Aprobado por Mario: entra el hambre sencilla (barra que baja lento; en 0 no se regenera estamina y se pierde vida lento). Comida: latas en el loot de la ciudad y del distrito industrial, bayas recolectables en el bosque normal. Se añade el botiquín (cura mucho, lento, se interrumpe al recibir daño). La sed sigue fuera del MVP.
 
+### Cámara V y prioridad de funcionalidad (2026-11-27)
+
+La tecla V alterna entre primera y tercera persona (sobre el hombro). La primera persona sigue siendo la experiencia por defecto para el terror. Las herramientas se ven en la mano para todos. Revisiones de seguridad en una sola pasada al final; UI y arte se pulen en esa pasada final (plan F7).
+
 ## 8. Siguientes documentos que dependen de este
 
 - `docs/specs/enemigo.md` (F4-1, Opus 5.5): ficha de la criatura y del acechador, sonidos, aspecto, umbrales de la escalera de avisos.
-- Spec de la máquina de estados de la IA (F4-2, Fable).
+- Spec de la máquina de estados de la IA (F4-2, Opus 5.5).
 - Specs de sistemas y Remotes (F0-3, Astra), incluido ObjectiveService.
 - `NightsConfig` (F5-1): pasar la tabla de la sección 3 a config.

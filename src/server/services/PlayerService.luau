@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local Held = require(script.Parent:WaitForChild("HeldItemVisual"))
 local Service = {}
 type State = {
 	health: number,
@@ -252,6 +253,7 @@ end
 function Service.Init(context: { [string]: unknown })
 	local configs = context.Configs :: any
 	playerConfig = configs.PlayerConfig
+	Held.Init(configs :: any)
 	net = configs.NetworkConfig
 	itemsConfig = configs.ItemsConfig.Items
 	local services = context.Services :: any
@@ -299,6 +301,9 @@ function Service.Start()
 	table.insert(
 		connections,
 		Players.PlayerRemoving:Connect(function(player)
+			if states[player] then
+				Held.Clear(states[player].character)
+			end
 			states[player] = nil
 		end)
 	)
@@ -360,6 +365,15 @@ function Service.Start()
 					sample(state, now)
 				end
 				if state.character then
+					local alive = state.life == "Alive"
+					local use = if alive then interaction.GetActive(player) else nil
+					local right = if use and use.action == "UseItem"
+						then use.targetId
+						elseif alive then inventory.GetEquipped(player.UserId)
+						else nil
+					Held.Sync(state.character, right, alive and state.flashlightOn)
+				end
+				if state.character then
 					local part, human = parts(state.character)
 					if not part or not human or not state.character:FindFirstChild("Head") then
 						reload(player, state)
@@ -379,6 +393,17 @@ end
 function Service.GetValidatedPosition(player: Player): Vector3?
 	local state = states[player]
 	return if state then state.validPosition else nil
+end
+-- Lista de problemas de los prefabs en mano; SessionService la suma a la validacion de la run.
+function Service.ValidateHeld(): { string }
+	return Held.Validate()
+end
+-- Golpe cosmetico: los clientes animan el brazo de los demas personajes al cambiar SwingSeq.
+function Service.NotifySwing(player: Player)
+	local character = if states[player] then states[player].character else nil
+	if character then
+		character:SetAttribute("SwingSeq", ((character:GetAttribute("SwingSeq") :: number?) or 0) + 1)
+	end
 end
 function Service.GetState(player: Player): State?
 	return states[player]

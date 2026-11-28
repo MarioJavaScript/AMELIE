@@ -47,7 +47,8 @@ Las dependencias se inyectan al inicializar: no se hacen `require` circulares en
 |---|---|
 | `StateController` | Solicita snapshot, descarta revisiones viejas y distribuye estado confirmado. |
 | `InputController` | Enruta teclado, mando y táctil a intenciones; respeta bloqueos visuales. |
-| `FirstPersonController` | Primera persona, agachado visual y viewbobbing. |
+| `CameraController` | Cámara primera/tercera persona (V), agachado visual, viewbobbing, cuerpo propio visible en primera persona y colisión de la tercera persona (antes `FirstPersonController`). |
+| `HeldItemController` | Pose local de sostener y golpe cosmético para todos los personajes con `HeldRight`/`HeldLeft` y `SwingSeq`. |
 | `MovementController` | Solicita modo de movimiento y reconcilia estamina/velocidad autorizada. |
 | `FlashlightController` | Luz local, batería y orientación; los efectos en IA dependen del servidor. |
 | `InteractionController` | Foco y barra de acciones, inicio/cancelación, prompts. |
@@ -77,7 +78,7 @@ Rojo administra solo estos subárboles, preservando instancias desconocidas en s
 - `Workspace/Markers`: `BaseSpawn`, `RadioSocket`, `CampfireSocket`, `ObjectiveSpawns/<PieceId>/01..03`, `ResourceSpawns`, `LootSpawns`, `EnemySpawns`, `Nest`, `WaterZones`, `BuildZones`, `NoBuildZones`, `PatrolPoints/<RouteId>/NN`, `Hideouts`, `BridgeSite`, `BridgeEnds`, `CreatureCrossings`, `AnomalyZones`, `LorePoints`. IDs de autoría únicos; distancias y distribución se validan contra configs. Marcadores no colisionan. Coordenadas, atributos y nombres exactos en [mapa](mapa.md).
 - Tags de CollectionService (duplican las carpetas, que siguen siendo la fuente de verdad): `MapZone` (volúmenes de `Map/Zones`), `PieceSpawn`, `ResourceSpawn`, `LootSpawn`, `EnemySpawn`, `Nest`, `WaterZone`, `BuildZone`, `NoBuildZone`, `PatrolPoint`, `Hideout`, `BridgeSite`, `BridgeEnd`, `CreatureCrossing`, `AnomalyZone`, `LorePoint`. Además `PlayerBarrier` en las Parts de `Map/Rio` (colisionan con jugadores; el grupo de colisión que deja pasar a los enemigos lo asigna el servidor en F4). Los servicios pueden usar `GetTagged` o recorrer la carpeta; ambos deben dar el mismo conjunto.
 - `ServerStorage/MapVariants/PuenteConstruido`: variante del tramo central del puente, contenido de Studio generado por MapBuilder. Solo el servidor la clona en `Map/Puente/Construido` (comando de debug en Studio en F1; construcción por tramos en Fase 3) y WorldService la retira al empezar cada run.
-- `ServerStorage/Prefabs`: `Cimiento`, `Pared`, `MarcoPuerta`, `Fogata`, `CriaturaPrincipal`, `AcechadorMenor`, `Arbol`, `Roca`, `Arbusto`, `Contenedor`, `Mochila`, `Pila`, `Chatarra`, `PiezaBateria`, `PiezaAntena`, `PiezaTransceptor`, `PiezaCristal`. Nombres de búsqueda en `WorldConfig`; prefabs sin Scripts. Hitboxes, pivotes y Attachments se detallan en cada spec.
+- `ServerStorage/Prefabs`: `Cimiento`, `Pared`, `MarcoPuerta`, `Fogata`, `CriaturaPrincipal`, `AcechadorMenor`, `Arbol`, `Roca`, `Arbusto`, `Contenedor`, `Mochila`, `Pila`, `Chatarra`, `PiezaBateria`, `PiezaAntena`, `PiezaTransceptor`, `PiezaCristal`. Subcarpeta `ServerStorage/Prefabs/Held` con los modelos en mano (`Hacha`, `Pico`, `Venda`, `Botiquin`, `Lata`, `Baya`, `Pila`, `Linterna`; contrato en [jugador](jugador.md)). Nombres de búsqueda en `WorldConfig`; prefabs sin Scripts. Hitboxes, pivotes y Attachments se detallan en cada spec.
 - `Workspace/Runtime`: carpeta creada en servidor para clones de cada run. Nunca se borra Map al reiniciar. Nodos y loot se restauran desde marcadores/prefabs.
 
 ## Mapa de configs

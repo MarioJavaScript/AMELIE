@@ -118,7 +118,14 @@ export type HUDController = {
 }
 export type FeedbackController = { HitConfirmed: (node: Instance) -> () }
 export type MovementController = { IsCrouching: () -> boolean, GetMode: () -> "Walk" | "Sprint" | "Crouch" }
+export type CameraController = {
+	GetMode: () -> "First" | "Third",
+	SetReducedMotion: (enabled: boolean) -> (),
+}
+export type HeldItemController = { PlaySwing: () -> () }
 export type Controllers = {
+	CameraController: CameraController,
+	HeldItemController: HeldItemController,
 	StateController: StateController,
 	InteractionController: InteractionController,
 	InventoryController: InventoryController,

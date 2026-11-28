@@ -68,8 +68,20 @@ local function castFromCamera(range: number): RaycastResult?
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	local character = Players.LocalPlayer.Character
+	-- Los modelos en mano (HeldRight/HeldLeft) cuelgan del personaje, asi que quedan excluidos con el.
 	params.FilterDescendantsInstances = if character ~= nil then { character } else {}
-	return Workspace:Raycast(camera.CFrame.Position, camera.CFrame.LookVector * range, params)
+	local head = if character ~= nil then character:FindFirstChild("Head") else nil
+	if controllers.CameraController.GetMode() ~= "Third" or head == nil or not head:IsA("BasePart") then
+		return Workspace:Raycast(camera.CFrame.Position, camera.CFrame.LookVector * range, params)
+	end
+	-- Tercera persona: el rayo sale de la camara, pero el alcance se mide desde la cabeza.
+	local origin = camera.CFrame.Position
+	local result =
+		Workspace:Raycast(origin, camera.CFrame.LookVector * (range + (origin - head.Position).Magnitude), params)
+	if result ~= nil and (result.Position - head.Position).Magnitude > range then
+		return nil
+	end
+	return result
 end
 
 local function ancestorWith(instance: Instance, attribute: string): Model?
@@ -252,6 +264,7 @@ function Controller.Hit()
 	end
 	readyAt = now + controllers.InventoryController.GetEquippedHitCooldown()
 	Controller.Send("HitResource", { targetId = id }, "Hit", node)
+	controllers.HeldItemController.PlaySwing()
 end
 
 -- Soltar la tecla cancela una accion de mantener solo si queda bastante hold (un tap en un recoger corto no cancela).

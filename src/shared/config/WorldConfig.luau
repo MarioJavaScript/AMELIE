@@ -1,6 +1,7 @@
 --!strict
 return {
 	PrefabsName = "Prefabs",
+	HeldPrefabsFolder = "Held",
 	MarkersName = "Markers",
 	RuntimeName = "Runtime",
 	ResourcesFolder = "Resources",

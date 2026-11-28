@@ -1,6 +1,20 @@
 --!strict
 return {
-	Camera = { Fov = 75, BobAmplitudeStuds = 0.06, BobFrequencyHz = 8, CrouchOffsetStuds = 1 },
+	Camera = {
+		Fov = 75,
+		BobAmplitudeStuds = 0.06,
+		BobFrequencyHz = 8,
+		CrouchOffsetStuds = 1,
+		DefaultMode = "First",
+		ThirdPerson = {
+			DistanceStuds = 8,
+			ShoulderOffset = Vector3.new(1.75, 0.5, 0),
+			CollisionRadiusStuds = 0.5,
+			MinDistanceStuds = 1,
+			PushOutSmoothing = 10,
+		},
+	},
+	FlashlightHeldModel = "Linterna",
 	Speed = { Walk = 12, Sprint = 20, Crouch = 6, Downed = 2, HeavyCarry = 8 },
 	Stamina = {
 		Max = 100,

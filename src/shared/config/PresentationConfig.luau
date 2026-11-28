@@ -7,6 +7,7 @@ return {
 		Crouch = Enum.KeyCode.C,
 		Sprint = Enum.KeyCode.LeftShift,
 		Flashlight = Enum.KeyCode.F,
+		ToggleCamera = Enum.KeyCode.V,
 		DebugCyclePhase = Enum.KeyCode.F6,
 		DebugCycleNight = Enum.KeyCode.F7,
 		Hit = Enum.UserInputType.MouseButton1,
@@ -61,6 +62,32 @@ return {
 		-- SetCore puede fallar al inicio: reintentos para desactivar el boton de reiniciar.
 		ResetButtonRetries = 30,
 		ResetButtonRetrySeconds = 1,
+	},
+
+	-- Camara propia (Scriptable) en primera y tercera persona.
+	CameraRig = {
+		PitchLimitDegrees = 80,
+		-- Grados por pixel de movimiento de raton (se multiplica por la sensibilidad de Roblox).
+		MouseDegreesPerPixel = 0.25,
+		-- Tercera persona: con la camara a menos de esto de la cabeza, el personaje se vuelve semitransparente.
+		FadeDistanceStuds = 1.5,
+		FadedTransparency = 0.7,
+		-- Distancia minima entre origen y destino para lanzar el spherecast.
+		MinCastStuds = 0.05,
+	},
+
+	-- Pose de sostener y golpe cosmetico (grados). Pitch levanta el brazo al frente (90 = horizontal),
+	-- Yaw lo cierra hacia el centro y Roll lo gira sobre su eje. Se aplica al C0 del hombro, solo en local.
+	HeldPose = {
+		Right = { Pitch = 80, Yaw = 12, Roll = 0 },
+		Left = { Pitch = 75, Yaw = -12, Roll = 0 },
+		SwingSeconds = 0.3,
+		-- Golpe del brazo derecho: sube atras (suma Pitch), baja al frente (resta Pitch) y vuelve.
+		SwingWindupDegrees = 70,
+		SwingFollowDegrees = -45,
+		-- Fracciones del golpe: [0, WindupFraction] sube, hasta StrikeFraction baja, el resto recupera.
+		SwingWindupFraction = 0.35,
+		SwingStrikeFraction = 0.7,
 	},
 
 	Flashlight = {

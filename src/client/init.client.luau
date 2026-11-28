@@ -26,7 +26,8 @@ local folder = script:WaitForChild("controllers")
 local order = {
 	"StateController",
 	"InputController",
-	"FirstPersonController",
+	"CameraController",
+	"HeldItemController",
 	"MovementController",
 	"FlashlightController",
 	"InteractionController",

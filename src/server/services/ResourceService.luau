@@ -415,6 +415,7 @@ function Service.Hit(player: Player, targetId: string): string
 		replication.EmitFeedback("ResourceDepleted", node.id, nodeAt, nil)
 		node.model:Destroy()
 	end
+	players.NotifySwing(player)
 	return "Ok"
 end
 
